@@ -4,28 +4,37 @@ import sqlite3
 # 1. Setup SQL Database
 conn = sqlite3.connect('tasks.db', check_same_thread=False)
 c = conn.cursor()
-c.execute('CREATE TABLE IF NOT EXISTS tasks (employee TEXT, update_text TEXT)')
+c.execute('CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, employee TEXT, update_text TEXT)')
 conn.commit()
 
-# 2. Design the App for Phone/Desktop
-st.set_page_config(page_title="Team Progress", layout="centered")
-st.title("🚀 Project Management App")
+st.set_page_config(page_title="My-Task-Box", layout="centered")
+st.title("🚀 My-Task-Box")
 
-# 3. Employee Input Section
+# 2. Add New Progress
 with st.expander("➕ Add New Progress Update"):
     name = st.text_input("Your Name")
-    progress = st.text_area("What did you work on today?")
+    progress = st.text_area("What did you work on?")
     if st.button("Share with Team"):
         if name and progress:
             c.execute('INSERT INTO tasks (employee, update_text) VALUES (?, ?)', (name, progress))
             conn.commit()
-            st.success("Shared!")
-        else:
-            st.error("Please fill in both fields.")
+            st.rerun() # Refresh the app to show the new task
 
-# 4. Show the Task Board (SQL Data)
-st.header("📋 Recent Team Progress")
-data = c.execute('SELECT * FROM tasks ORDER BY rowid DESC').fetchall()
+# 3. Show Task Board with Delete Buttons
+st.header("📋 Team Progress")
+data = c.execute('SELECT id, employee, update_text FROM tasks ORDER BY id DESC').fetchall()
 
 for row in data:
-    st.info(f"**{row[0]}**: {row[1]}")
+    task_id = row[0]
+    employee_name = row[1]
+    task_content = row[2]
+    
+    # Create a nice box for each task
+    with st.container(border=True):
+        st.write(f"**{employee_name}**: {task_content}")
+        
+        # This button uses the unique SQL 'id' to delete the right task
+        if st.button(f"🗑️ Delete", key=f"delete_{task_id}"):
+            c.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
+            conn.commit()
+            st.rerun() # Refresh the app to show it's gone
