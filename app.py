@@ -1,94 +1,115 @@
 import streamlit as st
 import sqlite3
 
-# 1. Database Setup (v4)
-conn = sqlite3.connect('tasks_v4.db', check_same_thread=False)
+# Database Setup (v5 for Phase/Progress columns)
+conn = sqlite3.connect('tasks_v5.db', check_same_thread=False)
 c = conn.cursor()
 c.execute('CREATE TABLE IF NOT EXISTS employees (id INTEGER PRIMARY KEY, name TEXT)')
 c.execute('''CREATE TABLE IF NOT EXISTS projects 
-             (id INTEGER PRIMARY KEY, name TEXT, lead TEXT, description TEXT)''')
-c.execute('''CREATE TABLE IF NOT EXISTS tasks 
-             (id INTEGER PRIMARY KEY, title TEXT, employee TEXT, 
-              project_id INTEGER, duration TEXT, progress INTEGER, details TEXT)''')
+             (id INTEGER PRIMARY KEY, name TEXT, lead TEXT, duration TEXT, 
+              phase TEXT, progress INTEGER, details TEXT)''')
+c.execute('CREATE TABLE IF NOT EXISTS project_chat (id INTEGER PRIMARY KEY, project_id INTEGER, user TEXT, msg TEXT)')
 conn.commit()
 
-# --- GITHUB STYLE FONT CSS ---
 st.set_page_config(page_title="My-Task-Box", page_icon="📦", layout="wide")
 
+# --- FIXED CSS (No Overlapping) ---
 st.markdown("""
     <style>
     html, body, [class*="st-"] {
-        font-size: 13px; /* Smaller base font like GitHub */
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        font-size: 13px;
+        line-height: 1.6; /* Fixes the overlapping text */
     }
-    h1 { font-size: 16px !important; font-weight: 600 !important; } /* Titles slightly bigger */
-    h2 { font-size: 14px !important; font-weight: 600 !important; }
-    h3 { font-size: 13px !important; font-weight: 600 !important; }
-    .stButton>button { font-size: 12px; padding: 0px 10px; }
+    h1 { font-size: 18px !important; padding-bottom: 10px; }
+    h2 { font-size: 15px !important; margin-top: 20px; }
+    .stChatFloatingInputContainer { bottom: 20px; }
+    /* Make containers look like GitHub cards */
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        padding: 15px !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 # --- SIDEBAR ---
 with st.sidebar:
     st.title("📂 My-Task-Box")
-    page = st.radio("Menu", ["Projects", "Tasks", "Employees", "Reports", "Chats"])
+    page = st.radio("Menu", ["Projects", "Employees", "Tasks"])
 
-# --- EMPLOYEES PAGE ---
-if page == "Employees":
-    st.title("👥 Employee Directory")
-    with st.expander("➕ Add New Employee"):
-        new_emp = st.text_input("Name")
-        if st.button("Add"):
-            c.execute('INSERT INTO employees (name) VALUES (?)', (new_emp,))
-            conn.commit()
-            st.rerun()
-    
-    emps = c.execute('SELECT * FROM employees').fetchall()
-    for emp in emps:
-        st.write(f"• {emp[1]}")
+# --- SHARED STATE ---
+if 'active_project_id' not in st.session_state:
+    st.session_state.active_project_id = None
 
 # --- PROJECTS PAGE ---
-elif page == "Projects":
-    st.title("🏗️ Projects")
-    with st.expander("➕ Create New Project"):
-        p_name = st.text_input("Project Name")
-        # Pull names from Employees table for the dropdown
-        emp_list = [row[1] for row in c.execute('SELECT name FROM employees').fetchall()]
-        p_lead = st.selectbox("Assign Project Lead", ["Select Lead"] + emp_list)
-        p_desc = st.text_area("Project Goal")
-        
-        if st.button("Launch Project"):
-            c.execute('INSERT INTO projects (name, lead, description) VALUES (?,?,?)', (p_name, p_lead, p_desc))
-            conn.commit()
-            st.rerun()
-
-    projs = c.execute('SELECT * FROM projects').fetchall()
-    for p in projs:
-        with st.container(border=True):
-            st.write(f"**{p[1]}** (Lead: {p[2]})")
-            st.caption(p[3])
-
-# --- TASKS PAGE (Updated for Projects) ---
-elif page == "Tasks":
-    st.title("✅ Tasks")
-    # State management for detail view
-    if 'selected_task' not in st.session_state: st.session_state.selected_task = None
-    
-    if st.session_state.selected_task:
-        # (Detail view code remains same as before...)
-        if st.button("⬅️ Back"): st.session_state.selected_task = None; st.rerun()
-    else:
-        with st.expander("➕ Create Task"):
-            t_title = st.text_input("Task Title")
-            proj_list = {row[1]: row[0] for row in c.execute('SELECT name, id FROM projects').fetchall()}
-            t_proj = st.selectbox("Link to Project", list(proj_list.keys()))
-            t_emp = st.selectbox("Assign Employee", emp_list if 'emp_list' in locals() else [])
-            # (Other inputs...)
-            if st.button("Save Task"):
-                c.execute('INSERT INTO tasks (title, employee, project_id) VALUES (?,?,?)', 
-                          (t_title, t_emp, proj_list[t_proj]))
+if page == "Projects":
+    if st.session_state.active_project_id is None:
+        st.title("🏗️ Projects")
+        with st.expander("➕ Create New Project"):
+            p_name = st.text_input("Project Name")
+            p_dur = st.text_input("Estimated Duration")
+            p_phase = st.text_input("Current Phase")
+            p_prog = st.slider("Phase Progress %", 0, 100, 0)
+            if st.button("Launch Project"):
+                c.execute('INSERT INTO projects (name, duration, phase, progress) VALUES (?,?,?,?)', 
+                          (p_name, p_dur, p_phase, p_prog))
                 conn.commit()
                 st.rerun()
-        # (Grid view code same as before...)
 
-# (Other placeholders for Reports and Chats...)
+        # Grid of Projects
+        projs = c.execute('SELECT id, name, phase FROM projects').fetchall()
+        cols = st.columns(4)
+        for i, p in enumerate(projs):
+            with cols[i % 4]:
+                with st.container(border=True):
+                    st.write(f"**{p[1]}**")
+                    st.caption(f"Phase: {p[2]}")
+                    if st.button("Open Project", key=f"open_{p[0]}"):
+                        st.session_state.active_project_id = p[0]
+                        st.rerun()
+    
+    else:
+        # --- PROJECT DETAIL VIEW (The Vision) ---
+        p_id = st.session_state.active_project_id
+        p_data = c.execute('SELECT * FROM projects WHERE id = ?', (p_id,)).fetchone()
+        
+        col_left, col_right = st.columns([1, 1]) # Split Screen
+
+        with col_left:
+            if st.button("⬅️ Back to All Projects"):
+                st.session_state.active_project_id = None
+                st.rerun()
+            
+            st.title(f"Project: {p_data[1]}") # Top Left Name
+            
+            with st.container(border=True):
+                st.subheader("📋 Job Details")
+                st.write(f"⏱️ **Est. Duration:** {p_data[3]}")
+                st.write(f"🏗️ **Current Phase:** {p_data[4]}")
+                st.write(f"📈 **Phase Progress:** {p_data[5]}%")
+                st.progress(p_data[5]/100)
+                
+                st.divider()
+                st.write("**Next Phases:** TBD")
+                st.write("**Employees Involved:** Admin")
+
+        with col_right:
+            st.subheader("💬 Project Chat")
+            # Portrait Chat Box
+            chat_container = st.container(height=400, border=True)
+            
+            # Show messages
+            msgs = c.execute('SELECT user, msg FROM project_chat WHERE project_id = ?', (p_id,)).fetchall()
+            for m in msgs:
+                chat_container.write(f"**{m[0]}**: {m[1]}")
+            
+            # Send message
+            chat_input = st.text_input("Type message...", key="chat_in")
+            if st.button("Send"):
+                if chat_input:
+                    c.execute('INSERT INTO project_chat (project_id, user, msg) VALUES (?,?,?)', (p_id, "Admin", chat_input))
+                    conn.commit()
+                    st.rerun()
+
+# --- EMPLOYEES PAGE (Simplified for now) ---
+elif page == "Employees":
+    st.title("👥 Employees")
+    # ... previous employee code ...
