@@ -2,37 +2,39 @@ import streamlit as st
 import sqlite3
 
 # --- 1. DATABASE SETUP (v6) ---
+# Using v6 to ensure a clean start with all the columns we need
 conn = sqlite3.connect('tasks_v6.db', check_same_thread=False)
 c = conn.cursor()
 
-# Create tables for the new features
 c.execute('CREATE TABLE IF NOT EXISTS employees (id INTEGER PRIMARY KEY, name TEXT)')
+
 c.execute('''CREATE TABLE IF NOT EXISTS projects 
              (id INTEGER PRIMARY KEY, name TEXT, duration TEXT, 
               phase TEXT, progress INTEGER, details TEXT)''')
-c.execute('CREATE TABLE IF NOT EXISTS project_chat 
-             (id INTEGER PRIMARY KEY, project_id INTEGER, user TEXT, msg TEXT)')
+
+c.execute('''CREATE TABLE IF NOT EXISTS project_chat 
+             (id INTEGER PRIMARY KEY, project_id INTEGER, user TEXT, msg TEXT)''')
 conn.commit()
 
 # --- 2. PAGE CONFIG & STYLE ---
 st.set_page_config(page_title="My-Task-Box", page_icon="📦", layout="wide")
 
-# CSS to fix overlapping, shrink fonts, and create the "GitHub" look
+# CSS to fix overlapping, shrink fonts, and create the GitHub-style layout
 st.markdown("""
     <style>
-    /* Base Font Size & Line Height */
+    /* Base Font Size & Line Height to prevent overlap */
     html, body, [class*="st-"] {
         font-size: 13px;
         line-height: 1.6;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     }
     
-    /* Title Adjustments (Slightly larger by ~2pts) */
+    /* Title Adjustments */
     h1 { font-size: 18px !important; font-weight: 600 !important; padding-bottom: 10px; }
     h2 { font-size: 15px !important; font-weight: 600 !important; }
     h3 { font-size: 13px !important; font-weight: 600 !important; }
     
-    /* Column Spacing to prevent overlap */
+    /* Container Spacing */
     div[data-testid="stColumn"] { 
         padding: 15px; 
     }
@@ -43,7 +45,7 @@ st.markdown("""
         border-right: 1px solid #d0d7de;
     }
     
-    /* Card Container Look */
+    /* GitHub-style Card Look */
     [data-testid="stVerticalBlockBorderWrapper"] {
         border: 1px solid #d0d7de !important;
         border-radius: 6px !important;
@@ -76,7 +78,6 @@ if 'active_project_id' not in st.session_state:
 
 # --- 4. NAVIGATION LOGIC ---
 
-# PROJECTS PAGE
 if page == "🏗️ Projects":
     if st.session_state.active_project_id is None:
         st.title("Projects Dashboard")
@@ -112,14 +113,14 @@ if page == "🏗️ Projects":
                             st.rerun()
 
     else:
-        # PROJECT DETAIL VIEW (The Vision)
+        # PROJECT DETAIL VIEW
         p_id = st.session_state.active_project_id
         p_data = c.execute('SELECT * FROM projects WHERE id = ?', (p_id,)).fetchone()
         
-        # Top Header
-        st.title(f"📍 Project: {p_data[1]}")
+        # Header with Project Name in Top Left
+        st.title(f"📍 {p_data[1]}")
         
-        col_left, col_right = st.columns([1, 1]) # Split Screen
+        col_left, col_right = st.columns([1, 1]) # Split screen for Details and Chat
 
         with col_left:
             if st.button("⬅️ Back to Dashboard"):
@@ -137,7 +138,7 @@ if page == "🏗️ Projects":
                 st.write("**Next Phases:** TBD")
                 st.write("**Employees Involved:** Admin")
                 
-                if st.button("🗑️ Delete Project", type="secondary"):
+                if st.button("🗑️ Delete Project"):
                     c.execute('DELETE FROM projects WHERE id = ?', (p_id,))
                     conn.commit()
                     st.session_state.active_project_id = None
@@ -148,12 +149,12 @@ if page == "🏗️ Projects":
             # Portrait Chat Box
             chat_box = st.container(height=450, border=True)
             
-            # Show messages from database
+            # Pull chat messages from DB
             msgs = c.execute('SELECT user, msg FROM project_chat WHERE project_id = ?', (p_id,)).fetchall()
             for m in msgs:
                 chat_box.write(f"**{m[0]}**: {m[1]}")
             
-            # Chat input
+            # Input for new chat
             chat_input = st.text_input("New Message", placeholder="Type here...", key="msg_input")
             if st.button("Send Message"):
                 if chat_input:
@@ -162,7 +163,6 @@ if page == "🏗️ Projects":
                     conn.commit()
                     st.rerun()
 
-# EMPLOYEES PAGE
 elif page == "👥 Employees":
     st.title("Employee Directory")
     new_emp = st.text_input("Add Employee Name")
@@ -177,8 +177,11 @@ elif page == "👥 Employees":
     for e in emps:
         st.write(f"• {e[0]}")
 
-# PLACEHOLDERS FOR NEW SECTIONS
+elif page == "✅ Tasks":
+    st.title("Task Management")
+    st.write("Task board logic will go here.")
+
+# All other sidebar categories use this generic template for now
 else:
     st.title(page)
-    st.info(f"The **{page}** module is ready for integration.")
-    st.write("This section will be linked to your main database to track specific documents and data.")
+    st.info(f"The **{page}** module is active and ready for configuration.")
