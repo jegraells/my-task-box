@@ -12,91 +12,87 @@ c.execute('''CREATE TABLE IF NOT EXISTS project_chat
              (id INTEGER PRIMARY KEY, project_id INTEGER, user TEXT, msg TEXT)''')
 conn.commit()
 
-# --- 2. PAGE CONFIG & BEIGE/NAVY/PINK THEME ---
+# --- 2. PAGE CONFIG & DESIGN ---
 st.set_page_config(page_title="My-Task-Box", page_icon="📦", layout="wide")
 
 st.markdown("""
     <style>
-    /* 1. Main Background and Text Color */
+    /* 1. Global Background (Beige) */
     .stApp {
-        background-color: #F5F5DC; /* Beige */
+        background-color: #F5F5DC;
     }
     
-    /* 2. Global Text Color (Navy Blue) */
+    /* 2. Gemini-Style Font & Charcoal Navy Color */
     html, body, [class*="st-"], p, div, label {
-        color: #000080 !important; /* Navy Blue */
-        font-family: 'Helvetica Neue', Arial, sans-serif;
+        color: #1e293b !important; /* Charcoal Navy Blend */
+        font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
         font-size: 14px;
-        line-height: 1.8 !important; /* Extra space to prevent overlap */
+        line-height: 1.8;
     }
 
-    /* 3. Titles (Navy Blue & Spaced) */
+    /* 3. Titles */
     h1, h2, h3 {
-        color: #000080 !important;
-        margin-bottom: 20px !important;
-        margin-top: 10px !important;
+        color: #0f172a !important; /* Deepest Navy */
+        font-weight: 600 !important;
+        margin-bottom: 1.5rem !important;
     }
 
-    /* 4. Sidebar Styling */
+    /* 4. Sidebar Transformation */
     [data-testid="stSidebar"] {
-        background-color: #EFEFDB !important; /* Slightly darker beige */
-        border-right: 1px solid #000080;
+        background-color: #EFEFDB !important;
+        border-right: 1px solid #cbd5e1;
     }
 
-    /* 5. Pink Highlight for Selected Menu Item */
-    /* This targets the radio button container to look like a list */
-    div[data-testid="stSidebarNav"] {
-        padding-top: 20px;
-    }
-    
-    /* Removing the radio circles and making it a list */
-    div[data-testid="stWidgetLabel"] { display: none; }
-    
-    .st-emotion-cache-1647ite { 
-        background-color: transparent !important; 
+    /* HIDE RADIO BUTTON CIRCLES */
+    [data-testid="stWidgetLabel"] { display: none; }
+    div[role="radiogroup"] label[data-baseweb="radio"] div:first-child {
+        display: none !important; /* Removes the circle */
     }
 
-    /* Custom Pink Highlight for the active selection */
-    div.st-ae [data-testid="stMarkdownContainer"] {
-        color: #000080;
-    }
-    
-    /* Target the selected radio option */
+    /* 5. MENU INTERACTION (Hover & Click) */
     div[role="radiogroup"] > label[data-baseweb="radio"] {
         background-color: transparent;
-        padding: 10px;
-        border-radius: 5px;
+        padding: 12px 20px !important;
+        border-radius: 8px;
         width: 100%;
+        transition: all 0.3s ease; /* Smooth transition */
+        cursor: pointer;
+        border: none;
     }
 
+    /* Mouse Hover Reaction */
+    div[role="radiogroup"] > label[data-baseweb="radio"]:hover {
+        background-color: rgba(30, 41, 59, 0.05) !important;
+        padding-left: 25px !important; /* Pops to the right slightly */
+        color: #3b82f6 !important; /* Blue-ish reaction */
+    }
+
+    /* Pink Highlight when Selected */
     div[role="radiogroup"] > label[data-baseweb="radio"]:has(input:checked) {
-        background-color: #FFC0CB !important; /* Pink Highlight */
-        color: white !important;
-        font-weight: bold;
+        background-color: #FFC0CB !important; /* Pink */
+        color: #000000 !important;
+        font-weight: 700 !important;
+        box-shadow: 0px 4px 6px rgba(0,0,0,0.05);
     }
 
-    /* 6. Fix for Overlapping Columns */
+    /* 6. Spacing Fix for Columns */
     div[data-testid="stColumn"] {
-        padding: 25px !important;
-        background-color: rgba(255, 255, 255, 0.3); /* Soft white overlay */
-        border-radius: 10px;
-        margin: 10px;
+        padding: 2rem !important;
+        background-color: rgba(255, 255, 255, 0.4); 
+        border-radius: 12px;
     }
 
-    /* 7. Chat Box Portrait Style */
-    .chat-box {
-        background-color: white;
-        border: 2px solid #000080;
-        border-radius: 10px;
-        padding: 15px;
+    /* Custom Chat Scrollbar */
+    .st-emotion-cache-1647ite { 
+        padding: 1rem; 
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. SIDEBAR NAVIGATION ---
+# --- 3. SIDEBAR ---
 with st.sidebar:
     st.title("📂 My-Task-Box")
-    # Using a radio but CSS hides the circles to make it look like a menu list
+    # This radio now looks like a simple text list thanks to CSS
     page = st.radio("Navigation", [
         "🏗️ Projects", "👥 Employees", "✅ Tasks", "📄 Licenses & Permits",
         "🏦 Bonds", "💰 Payroll", "👔 HR", "🔍 Exploration",
@@ -104,7 +100,7 @@ with st.sidebar:
     ])
     st.divider()
 
-# Session State
+# Session State for App Flow
 if 'active_project_id' not in st.session_state:
     st.session_state.active_project_id = None
 
@@ -129,12 +125,12 @@ if page == "🏗️ Projects":
         st.divider()
         
         projs = c.execute('SELECT id, name, phase, progress FROM projects').fetchall()
-        cols = st.columns(3) # Wider columns to prevent overlap
+        cols = st.columns(3)
         for i, p in enumerate(projs):
             with cols[i % 3]:
                 with st.container(border=True):
                     st.write(f"### {p[1]}")
-                    st.write(f"Phase: {p[2]}")
+                    st.write(f"**Phase:** {p[2]}")
                     st.progress(p[3]/100)
                     if st.button("Open Details", key=f"p_{p[0]}"):
                         st.session_state.active_project_id = p[0]
@@ -144,6 +140,7 @@ if page == "🏗️ Projects":
         p_id = st.session_state.active_project_id
         p_data = c.execute('SELECT * FROM projects WHERE id = ?', (p_id,)).fetchone()
         
+        # Header (Top Left)
         st.title(f"📍 {p_data[1]}")
         
         col_left, col_right = st.columns([1, 1])
@@ -170,7 +167,7 @@ if page == "🏗️ Projects":
             for m in msgs:
                 chat_box.write(f"**{m[0]}**: {m[1]}")
             
-            chat_input = st.text_input("Message", key="msg_input")
+            chat_input = st.text_input("Message", placeholder="Type here...", key="msg_input")
             if st.button("Send"):
                 if chat_input:
                     c.execute('INSERT INTO project_chat (project_id, user, msg) VALUES (?,?,?)', (p_id, "Admin", chat_input))
@@ -179,6 +176,7 @@ if page == "🏗️ Projects":
 
 elif page == "👥 Employees":
     st.title("Employee Directory")
+    # ... (Employee logic same as before)
     new_emp = st.text_input("Name")
     if st.button("Add"):
         c.execute('INSERT INTO employees (name) VALUES (?)', (new_emp,))
@@ -190,4 +188,4 @@ elif page == "👥 Employees":
 
 else:
     st.title(page)
-    st.write(f"Welcome to the {page} section.")
+    st.write(f"Section for {page} is under construction.")
