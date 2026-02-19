@@ -22,9 +22,9 @@ st.markdown("""
         background-color: #F5F5DC;
     }
     
-    /* 2. Gemini-Style Font & Charcoal Navy Color */
+    /* 2. Global Text Color (Charcoal Navy Blend) */
     html, body, [class*="st-"], p, div, label {
-        color: #1e293b !important; /* Charcoal Navy Blend */
+        color: #1e293b !important; 
         font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
         font-size: 14px;
         line-height: 1.8;
@@ -32,21 +32,22 @@ st.markdown("""
 
     /* 3. Titles */
     h1, h2, h3 {
-        color: #0f172a !important; /* Deepest Navy */
+        color: #0f172a !important; 
         font-weight: 600 !important;
         margin-bottom: 1.5rem !important;
     }
 
-    /* 4. Sidebar Transformation */
+    /* 4. Sidebar Styling - Ensuring visibility */
     [data-testid="stSidebar"] {
         background-color: #EFEFDB !important;
         border-right: 1px solid #cbd5e1;
     }
 
-    /* HIDE RADIO BUTTON CIRCLES */
+    /* HIDE RADIO BUTTON CIRCLES ONLY - KEEP TEXT VISIBLE */
     [data-testid="stWidgetLabel"] { display: none; }
+    
     div[role="radiogroup"] label[data-baseweb="radio"] div:first-child {
-        display: none !important; /* Removes the circle */
+        display: none !important; 
     }
 
     /* 5. MENU INTERACTION (Hover & Click) */
@@ -55,24 +56,33 @@ st.markdown("""
         padding: 12px 20px !important;
         border-radius: 8px;
         width: 100%;
-        transition: all 0.3s ease; /* Smooth transition */
+        transition: all 0.2s ease;
         cursor: pointer;
         border: none;
+        display: block !important;
+    }
+
+    /* Ensure the text inside the label is dark navy and visible */
+    div[role="radiogroup"] > label[data-baseweb="radio"] div[data-testid="stMarkdownContainer"] p {
+        color: #0f172a !important; 
+        font-weight: 500 !important;
+        font-size: 14px !important;
     }
 
     /* Mouse Hover Reaction */
     div[role="radiogroup"] > label[data-baseweb="radio"]:hover {
-        background-color: rgba(30, 41, 59, 0.05) !important;
-        padding-left: 25px !important; /* Pops to the right slightly */
-        color: #3b82f6 !important; /* Blue-ish reaction */
+        background-color: rgba(30, 41, 59, 0.08) !important;
+        padding-left: 25px !important; 
     }
 
     /* Pink Highlight when Selected */
     div[role="radiogroup"] > label[data-baseweb="radio"]:has(input:checked) {
-        background-color: #FFC0CB !important; /* Pink */
+        background-color: #FFC0CB !important; 
+    }
+    
+    div[role="radiogroup"] > label[data-baseweb="radio"]:has(input:checked) p {
         color: #000000 !important;
         font-weight: 700 !important;
-        box-shadow: 0px 4px 6px rgba(0,0,0,0.05);
     }
 
     /* 6. Spacing Fix for Columns */
@@ -81,18 +91,12 @@ st.markdown("""
         background-color: rgba(255, 255, 255, 0.4); 
         border-radius: 12px;
     }
-
-    /* Custom Chat Scrollbar */
-    .st-emotion-cache-1647ite { 
-        padding: 1rem; 
-    }
     </style>
     """, unsafe_allow_html=True)
 
 # --- 3. SIDEBAR ---
 with st.sidebar:
     st.title("📂 My-Task-Box")
-    # This radio now looks like a simple text list thanks to CSS
     page = st.radio("Navigation", [
         "🏗️ Projects", "👥 Employees", "✅ Tasks", "📄 Licenses & Permits",
         "🏦 Bonds", "💰 Payroll", "👔 HR", "🔍 Exploration",
@@ -100,7 +104,7 @@ with st.sidebar:
     ])
     st.divider()
 
-# Session State for App Flow
+# Session State
 if 'active_project_id' not in st.session_state:
     st.session_state.active_project_id = None
 
@@ -140,7 +144,6 @@ if page == "🏗️ Projects":
         p_id = st.session_state.active_project_id
         p_data = c.execute('SELECT * FROM projects WHERE id = ?', (p_id,)).fetchone()
         
-        # Header (Top Left)
         st.title(f"📍 {p_data[1]}")
         
         col_left, col_right = st.columns([1, 1])
@@ -176,7 +179,6 @@ if page == "🏗️ Projects":
 
 elif page == "👥 Employees":
     st.title("Employee Directory")
-    # ... (Employee logic same as before)
     new_emp = st.text_input("Name")
     if st.button("Add"):
         c.execute('INSERT INTO employees (name) VALUES (?)', (new_emp,))
