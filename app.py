@@ -12,103 +12,94 @@ c.execute('''CREATE TABLE IF NOT EXISTS project_chat
              (id INTEGER PRIMARY KEY, project_id INTEGER, user TEXT, msg TEXT)''')
 conn.commit()
 
-# --- 2. PAGE CONFIG & MODERN DESIGN ---
+# --- 2. PAGE CONFIG ---
 st.set_page_config(page_title="My-Task-Box", page_icon="📦", layout="wide")
 
-st.markdown("""
+# Get the current page from URL or default to Projects
+query_params = st.query_params
+current_page = query_params.get("page", "Projects")
+
+# --- 3. THE ULTIMATE CSS ---
+st.markdown(f"""
     <style>
-    /* Global Styles */
-    .stApp { background-color: #F5F5DC; }
+    /* Global Background & Font */
+    .stApp {{ background-color: #F5F5DC; }}
     
-    /* Charcoal Navy Blend & Inter Font */
-    html, body, [class*="st-"], p, div {
+    html, body, [class*="st-"], p, div {{
         color: #24292e !important;
         font-family: 'Inter', -apple-system, sans-serif !important;
-    }
+    }}
 
     /* Sidebar Background */
-    [data-testid="stSidebar"] {
+    [data-testid="stSidebar"] {{
         background-color: #EFEFDB !important;
         border-right: 1px solid #d0d7de;
-    }
+    }}
 
-    /* THE CLEAN TEXT MENU */
-    div.stButton > button {
-        background-color: transparent !important;
+    /* CUSTOM MENU LINKS */
+    .nav-link {{
+        display: block;
+        padding: 12px 20px;
+        margin: 4px 0;
         color: #24292e !important;
-        border: none !important;
-        text-align: left !important;
-        padding: 10px 15px !important;
-        width: 100% !important;
-        font-size: 14px !important;
-        font-weight: 500 !important;
-        box-shadow: none !important;
-        display: block !important;
-        transition: all 0.2s ease-in-out !important;
-        margin: 2px 0 !important;
-    }
+        text-decoration: none !important;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s ease-in-out;
+    }}
 
-    /* Hover effect */
-    div.stButton > button:hover {
-        background-color: rgba(30, 41, 59, 0.05) !important;
-        padding-left: 25px !important;
+    .nav-link:hover {{
+        background-color: rgba(30, 41, 59, 0.05);
+        padding-left: 30px; /* The "Pop" effect */
         color: #0f172a !important;
-    }
+    }}
 
-    /* --- THE PINK FIX --- */
-    /* We target the button specifically when it's inside our 'active' wrapper */
-    .active-wrapper div.stButton > button {
-        background-color: #FFC0CB !important; /* Pink */
+    .nav-link.active {{
+        background-color: #FFC0CB !important; /* PINK */
         color: #000000 !important;
         font-weight: 700 !important;
-        border-radius: 6px !important;
-        padding-left: 20px !important;
-    }
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }}
 
-    /* Fix Header Spacing */
-    h1 { margin-bottom: 30px !important; font-weight: 600 !important; }
+    /* Hide default Streamlit sidebar nav elements */
+    [data-testid="stSidebarNav"] {{ display: none; }}
     
-    /* Fix Column Overlap */
-    div[data-testid="stColumn"] {
-        padding: 20px !important;
-    }
+    h1 {{ font-weight: 600 !important; margin-bottom: 25px !important; }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. SIDEBAR NAVIGATION ---
+# --- 4. CUSTOM SIDEBAR MENU ---
 with st.sidebar:
     st.title("📂 My-Task-Box")
     
     menu_options = [
-        "🏗️ Projects", "👥 Employees", "✅ Tasks", "📄 Licenses & Permits",
-        "🏦 Bonds", "💰 Payroll", "👔 HR", "🔍 Exploration",
-        "🏢 Commercial", "🏠 Residential"
+        ("🏗️ Projects", "Projects"),
+        ("👥 Employees", "Employees"),
+        ("✅ Tasks", "Tasks"),
+        ("📄 Licenses & Permits", "Permits"),
+        ("🏦 Bonds", "Bonds"),
+        ("💰 Payroll", "Payroll"),
+        ("👔 HR", "HR"),
+        ("🔍 Exploration", "Exploration"),
+        ("🏢 Commercial", "Commercial"),
+        ("🏠 Residential", "Residential")
     ]
-    
-    if 'page' not in st.session_state:
-        st.session_state.page = "🏗️ Projects"
 
-    for option in menu_options:
-        # Check if this is the active page
-        if st.session_state.page == option:
-            # Wrap the active button in the pink-triggering div
-            st.markdown(f'<div class="active-wrapper">', unsafe_allow_html=True)
-            if st.button(option, key=f"active_{option}"):
-                st.session_state.page = option
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-        else:
-            # Normal button
-            if st.button(option, key=f"nav_{option}"):
-                st.session_state.page = option
-                st.rerun()
+    for label, internal_name in menu_options:
+        # Determine if this link is active
+        active_class = "active" if current_page == internal_name else ""
+        
+        # Create a clickable HTML link that updates the URL query parameter
+        st.markdown(
+            f'<a href="/?page={internal_name}" target="_self" class="nav-link {active_class}">{label}</a>', 
+            unsafe_allow_html=True
+        )
 
-# --- 4. NAVIGATION LOGIC ---
-page = st.session_state.page
+# --- 5. NAVIGATION LOGIC ---
 if 'active_project_id' not in st.session_state:
     st.session_state.active_project_id = None
 
-if page == "🏗️ Projects":
+if current_page == "Projects":
     if st.session_state.active_project_id is None:
         st.title("Projects Dashboard")
         with st.expander("➕ Create New Project"):
@@ -164,7 +155,7 @@ if page == "🏗️ Projects":
                     conn.commit()
                     st.rerun()
 
-elif page == "👥 Employees":
+elif current_page == "Employees":
     st.title("Employee Directory")
     new_emp = st.text_input("Name")
     if st.button("Add"):
@@ -175,5 +166,5 @@ elif page == "👥 Employees":
     for e in emps: st.write(f"• {e[0]}")
 
 else:
-    st.title(page)
-    st.write(f"Welcome to the {page} section.")
+    st.title(current_page)
+    st.write(f"Welcome to the {current_page} section.")
