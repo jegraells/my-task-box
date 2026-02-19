@@ -12,98 +12,103 @@ c.execute('''CREATE TABLE IF NOT EXISTS project_chat
              (id INTEGER PRIMARY KEY, project_id INTEGER, user TEXT, msg TEXT)''')
 conn.commit()
 
-# --- 2. PAGE CONFIG & DESIGN ---
+# --- 2. PAGE CONFIG & MODERN DESIGN ---
 st.set_page_config(page_title="My-Task-Box", page_icon="📦", layout="wide")
 
-# Theme Colors
-bg_beige = "#F5F5DC"
-sidebar_beige = "#EFEFDB"
-charcoal_navy = "#1e293b"
-pink_highlight = "#FFC0CB"
-
-st.markdown(f"""
+# Styling to strip away the "Button" look and fix the overlap
+st.markdown("""
     <style>
     /* Global Styles */
-    .stApp {{
-        background-color: {bg_beige};
-    }}
+    .stApp { background-color: #F5F5DC; }
     
-    html, body, [class*="st-"], p, div {{
-        color: {charcoal_navy} !important;
-        font-family: 'Inter', sans-serif !important;
-    }}
+    /* Charcoal Navy & Gemini-style Font */
+    html, body, [class*="st-"], p, div {
+        color: #24292e !important;
+        font-family: 'Inter', -apple-system, sans-serif !important;
+        line-height: 1.8 !important;
+    }
 
-    /* Sidebar Styling */
-    [data-testid="stSidebar"] {{
-        background-color: {sidebar_beige} !important;
-        border-right: 1px solid #cbd5e1;
-    }}
+    /* Sidebar Background */
+    [data-testid="stSidebar"] {
+        background-color: #EFEFDB !important;
+        border-right: 1px solid #d0d7de;
+    }
 
-    /* CUSTOM MENU BUTTONS (Replacing the broken radio) */
-    .menu-item {{
-        display: block;
-        padding: 12px 20px;
-        margin: 5px 0;
-        color: {charcoal_navy};
-        text-decoration: none;
-        border-radius: 8px;
-        transition: all 0.2s ease;
-        font-weight: 500;
-        background: none;
-        border: none;
-        width: 100%;
-        text-align: left;
-        cursor: pointer;
-    }}
+    /* THE TEXT-ONLY MENU FIX */
+    /* This removes all the gray button styling */
+    div.stButton > button {
+        background-color: transparent !important;
+        color: #24292e !important;
+        border: none !important;
+        text-align: left !important;
+        padding: 10px 15px !important;
+        width: 100% !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        box-shadow: none !important;
+        display: block !important;
+        transition: all 0.2s ease-in-out !important;
+    }
 
-    .menu-item:hover {{
-        background-color: rgba(30, 41, 59, 0.08);
-        padding-left: 28px; /* The "Pop" effect */
-        color: #000 !important;
-    }}
+    /* Hover effect: Pop and slight blue tint */
+    div.stButton > button:hover {
+        background-color: rgba(0, 51, 102, 0.05) !important;
+        padding-left: 25px !important;
+        color: #003366 !important;
+    }
 
-    .active-menu {{
-        background-color: {pink_highlight} !important;
+    /* The Pink Highlight for the active page */
+    /* We use a special attribute selector for the active state */
+    .active-btn {
+        background-color: #FFC0CB !important;
+        color: #000000 !important;
         font-weight: 700 !important;
-        color: #000 !important;
-    }}
+        border-radius: 6px !important;
+    }
 
-    /* Fix column overlap */
-    div[data-testid="stColumn"] {{
-        padding: 20px !important;
-    }}
+    /* Spacing between menu items */
+    [data-testid="stSidebarUserContent"] {
+        padding-top: 1rem;
+    }
+    
+    /* Header Spacing to prevent overlap */
+    h1 { margin-bottom: 30px !important; margin-top: 10px !important; }
+
     </style>
     """, unsafe_allow_html=True)
 
 # --- 3. SIDEBAR NAVIGATION ---
 with st.sidebar:
     st.title("📂 My-Task-Box")
-    st.write("---")
     
-    # Define our menu items
     menu_options = [
         "🏗️ Projects", "👥 Employees", "✅ Tasks", "📄 Licenses & Permits",
         "🏦 Bonds", "💰 Payroll", "👔 HR", "🔍 Exploration",
         "🏢 Commercial", "🏠 Residential"
     ]
     
-    # Initialize page in session state
     if 'page' not in st.session_state:
         st.session_state.page = "🏗️ Projects"
 
-    # Create the buttons manually for total control
     for option in menu_options:
-        is_active = "active-menu" if st.session_state.page == option else ""
-        if st.button(option, key=f"menu_{option}", use_container_width=True, help=f"Go to {option}"):
-            st.session_state.page = option
-            st.rerun()
+        # If this is the current page, we'll wrap it in a special div for the pink style
+        if st.session_state.page == option:
+            st.markdown('<div class="active-btn">', unsafe_allow_html=True)
+            if st.button(option, key=f"btn_{option}"):
+                st.session_state.page = option
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+        else:
+            if st.button(option, key=f"btn_{option}"):
+                st.session_state.page = option
+                st.rerun()
 
 # --- 4. NAVIGATION LOGIC ---
 page = st.session_state.page
-
 if 'active_project_id' not in st.session_state:
     st.session_state.active_project_id = None
 
+# Logic for different pages (Projects, Employees, etc.)
 if page == "🏗️ Projects":
     if st.session_state.active_project_id is None:
         st.title("Projects Dashboard")
@@ -127,7 +132,7 @@ if page == "🏗️ Projects":
                     st.write(f"### {p[1]}")
                     st.write(f"**Phase:** {p[2]}")
                     st.progress(p[3]/100)
-                    if st.button("Open Details", key=f"p_{p[0]}"):
+                    if st.button("Open Details", key=f"p_view_{p[0]}"):
                         st.session_state.active_project_id = p[0]
                         st.rerun()
     else:
@@ -138,7 +143,7 @@ if page == "🏗️ Projects":
         st.title(f"📍 {p_data[1]}")
         col_left, col_right = st.columns([1, 1])
         with col_left:
-            if st.button("⬅️ Back to Dashboard"):
+            if st.button("⬅️ Back"):
                 st.session_state.active_project_id = None
                 st.rerun()
             st.subheader("📋 Job Details")
@@ -172,4 +177,4 @@ elif page == "👥 Employees":
 
 else:
     st.title(page)
-    st.write(f"Section for {page} is under construction.")
+    st.write(f"Welcome to the {page} section.")
