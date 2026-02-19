@@ -25,58 +25,61 @@ st.markdown("""
     /* Global Background (Beige) */
     .stApp { background-color: #F5F5DC; }
     
-    /* GitHub Font Stack & Charcoal Navy */
+    /* Charcoal Navy Blend & GitHub Font Stack */
     html, body, [class*="st-"], p, div {
         color: #24292e !important;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif !important;
         font-size: 14px;
     }
 
-    /* Sidebar - Desktop Compact */
+    /* Sidebar Background */
     [data-testid="stSidebar"] {
         background-color: #EFEFDB !important;
         border-right: 1px solid #d0d7de;
         min-width: 260px !important;
     }
 
-    /* THE MENU ITEM STYLING (GitHub NavList Style) */
-    .nav-item {
-        display: flex;
-        align-items: center;
-        padding: 6px 12px; /* Close together */
-        margin: 2px 8px;
-        text-decoration: none;
+    /* KILL ALL DEFAULT BUTTON STYLING */
+    /* This removes the "dark gray" box you are seeing */
+    div.stButton > button {
+        background-color: transparent !important;
         color: #24292e !important;
-        border-radius: 6px;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: background 0.1s ease;
+        border: none !important;
+        box-shadow: none !important;
+        text-align: left !important;
+        width: 100% !important;
+        padding: 6px 12px !important;
+        margin: 0 !important;
+        border-radius: 6px !important;
+        transition: background 0.1s ease-in-out !important;
+        display: block !important;
     }
 
-    /* Hover: Slight highlight, no move */
-    .nav-item:hover {
-        background-color: rgba(209, 213, 218, 0.4);
-    }
-
-    /* ACTIVE STATE: Pink Highlight */
-    .nav-item-active {
-        background-color: #FFC0CB !important; /* PINK */
+    /* Subtle Hover (Light Gray/Navy tint) - No moving/popping */
+    div.stButton > button:hover {
+        background-color: rgba(30, 41, 59, 0.08) !important;
         color: #000 !important;
-        font-weight: 600;
     }
 
-    /* Remove default Streamlit padding at top of sidebar */
+    /* THE PINK HIGHLIGHT (Active State) */
+    .active-highlight {
+        background-color: #FFC0CB !important;
+        color: #000 !important;
+        font-weight: 600 !important;
+        padding: 6px 12px !important;
+        border-radius: 6px !important;
+        margin: 2px 0 !important;
+        display: block !important;
+    }
+
+    /* Compact Sidebar spacing */
     [data-testid="stSidebarUserContent"] {
         padding-top: 1rem;
     }
-
-    /* UI Containers */
-    div[data-testid="stColumn"] { padding: 15px !important; }
     
-    /* Main Content Headers */
-    h1 { font-size: 20px !important; font-weight: 600 !important; color: #1b1f23; }
-    h3 { font-size: 16px !important; font-weight: 600 !important; }
+    /* Column and Header Spacing */
+    div[data-testid="stColumn"] { padding: 15px !important; }
+    h1 { font-size: 22px !important; font-weight: 600 !important; margin-bottom: 20px !important; }
 
     </style>
     """, unsafe_allow_html=True)
@@ -84,7 +87,7 @@ st.markdown("""
 # --- 4. SIDEBAR NAVIGATION ---
 with st.sidebar:
     st.title("📂 My-Task-Box")
-    st.write("") # Spacer
+    st.write("") 
     
     menu_options = [
         ("🏗️ Projects", "🏗️ Projects"),
@@ -99,19 +102,14 @@ with st.sidebar:
         ("🏠 Residential", "🏠 Residential")
     ]
 
-    # Render each menu item using a button styled to look like a GitHub NavLink
+    # Clean Navigation Logic
     for label, name in menu_options:
-        is_active = st.session_state.page == name
-        
-        # We use a container to wrap the button so we can apply the Pink class
-        button_type = "secondary" # Base style
-        
-        # Custom logic to force the highlight via a CSS wrapper
-        if is_active:
-            st.markdown(f'<div class="nav-item nav-item-active">{label}</div>', unsafe_allow_html=True)
+        if st.session_state.page == name:
+            # Selected Item: Pink highlight, no button needed to stay pink
+            st.markdown(f'<div class="active-highlight">{label}</div>', unsafe_allow_html=True)
         else:
-            # If user clicks the button, update session state
-            if st.button(label, key=f"nav_{name}", use_container_width=True):
+            # Unselected Items: Totally transparent buttons
+            if st.button(label, key=f"nav_{name}"):
                 st.session_state.page = name
                 st.rerun()
 
@@ -123,12 +121,15 @@ if 'active_project_id' not in st.session_state:
 if page == "🏗️ Projects":
     if st.session_state.active_project_id is None:
         st.title("Projects")
-        with st.expander("➕ Create Project"):
-            p_name = st.text_input("Name")
-            p_dur = st.text_input("Duration")
-            p_phase = st.text_input("Phase")
-            p_prog = st.slider("Progress %", 0, 100, 0)
-            if st.button("Save"):
+        with st.expander("➕ New Project"):
+            c1, c2 = st.columns(2)
+            with c1:
+                p_name = st.text_input("Name")
+                p_dur = st.text_input("Duration")
+            with c2:
+                p_phase = st.text_input("Phase")
+                p_prog = st.slider("Progress %", 0, 100, 0)
+            if st.button("Create"):
                 if p_name:
                     c.execute('INSERT INTO projects (name, duration, phase, progress) VALUES (?,?,?,?)', 
                               (p_name, p_dur, p_phase, p_prog))
@@ -137,7 +138,7 @@ if page == "🏗️ Projects":
 
         st.divider()
         projs = c.execute('SELECT id, name, phase, progress FROM projects').fetchall()
-        cols = st.columns(4) # Desktop Grid
+        cols = st.columns(4) 
         for i, p in enumerate(projs):
             with cols[i % 4]:
                 with st.container(border=True):
@@ -159,8 +160,8 @@ if page == "🏗️ Projects":
                 st.session_state.active_project_id = None
                 st.rerun()
             st.subheader("Details")
-            st.write(f"Duration: {p_data[2]}")
-            st.write(f"Phase: {p_data[3]}")
+            st.write(f"**Duration:** {p_data[2]}")
+            st.write(f"**Current Phase:** {p_data[3]}")
             st.progress(p_data[4]/100)
         
         with col_right:
