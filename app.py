@@ -15,7 +15,6 @@ conn.commit()
 # --- 2. PAGE CONFIG ---
 st.set_page_config(page_title="My-Task-Box", page_icon="📦", layout="wide")
 
-# Initialize page state
 if 'page' not in st.session_state:
     st.session_state.page = "🏗️ Projects"
 
@@ -32,23 +31,27 @@ st.markdown("""
         font-size: 14px;
     }
 
-    /* --- FIX: Hiding 'keyboard_double_arrow' and styling the toggle --- */
+    /* --- THE ULTIMATE FIX FOR 'keyboard_double_arrow' --- */
+    /* 1. Target the button containing the text */
+    button[data-testid="sidebar-toggle"], 
     button[kind="headerNoPadding"] {
+        background-color: transparent !important;
+    }
+    
+    /* 2. Hide the actual text element inside the button */
+    span[data-testid="stSidebarCollapseIcon"],
+    button[kind="headerNoPadding"] div {
+        font-size: 0px !important; /* Makes the text invisible */
+    }
+
+    /* 3. Add back a clean icon manually */
+    span[data-testid="stSidebarCollapseIcon"]::after,
+    button[kind="headerNoPadding"]::after {
+        content: "≡"; /* Clean Hamburger menu icon */
+        font-size: 22px !important;
+        visibility: visible !important;
         color: #24292e !important;
-    }
-    /* This specifically targets the text-based icon that was glitching */
-    span[data-testid="stSidebarCollapseIcon"] {
-        visibility: hidden;
-        position: relative;
-    }
-    span[data-testid="stSidebarCollapseIcon"]::after {
-        content: "≡"; /* Using a clean 'hamburger' icon instead of the text */
-        visibility: visible;
-        position: absolute;
-        left: 0;
-        font-size: 24px;
-        color: #24292e;
-        top: -10px;
+        display: block;
     }
 
     /* Sidebar Background */
@@ -89,33 +92,24 @@ st.markdown("""
         display: block !important;
     }
 
-    [data-testid="stSidebarUserContent"] {
-        padding-top: 1rem;
-    }
-    
+    [data-testid="stSidebarUserContent"] { padding-top: 1rem; }
     div[data-testid="stColumn"] { padding: 15px !important; }
-    h1 { font-size: 22px !important; font-weight: 600 !important; margin-bottom: 20px !important; }
+    h1 { font-size: 22px !important; font-weight: 600 !important; }
 
     </style>
     """, unsafe_allow_html=True)
 
 # --- 4. SIDEBAR NAVIGATION ---
 with st.sidebar:
-    # Header Icon + Title
     st.markdown("### 📦 My-Task-Box")
     st.write("") 
     
     menu_options = [
-        ("🏗️ Projects", "🏗️ Projects"),
-        ("👥 Employees", "👥 Employees"),
-        ("✅ Tasks", "✅ Tasks"),
-        ("📄 Licenses & Permits", "📄 Licenses & Permits"),
-        ("🏦 Bonds", "🏦 Bonds"),
-        ("💰 Payroll", "💰 Payroll"),
-        ("👔 HR", "👔 HR"),
-        ("🔍 Exploration", "🔍 Exploration"),
-        ("🏢 Commercial", "🏢 Commercial"),
-        ("🏠 Residential", "🏠 Residential")
+        ("🏗️ Projects", "🏗️ Projects"), ("👥 Employees", "👥 Employees"), 
+        ("✅ Tasks", "✅ Tasks"), ("📄 Licenses & Permits", "📄 Licenses & Permits"),
+        ("🏦 Bonds", "🏦 Bonds"), ("💰 Payroll", "💰 Payroll"), 
+        ("👔 HR", "👔 HR"), ("🔍 Exploration", "🔍 Exploration"),
+        ("🏢 Commercial", "🏢 Commercial"), ("🏠 Residential", "🏠 Residential")
     ]
 
     for label, name in menu_options:
@@ -135,71 +129,35 @@ if page == "🏗️ Projects":
     if st.session_state.active_project_id is None:
         st.title("Projects")
         with st.expander("➕ New Project"):
-            c1, c2 = st.columns(2)
-            with c1:
-                p_name = st.text_input("Name")
-                p_dur = st.text_input("Duration")
-            with c2:
-                p_phase = st.text_input("Phase")
-                p_prog = st.slider("Progress %", 0, 100, 0)
+            p_name = st.text_input("Name")
             if st.button("Create"):
                 if p_name:
-                    c.execute('INSERT INTO projects (name, duration, phase, progress) VALUES (?,?,?,?)', 
-                              (p_name, p_dur, p_phase, p_prog))
+                    c.execute('INSERT INTO projects (name, progress) VALUES (?,?)', (p_name, 0))
                     conn.commit()
                     st.rerun()
-
-        st.divider()
-        projs = c.execute('SELECT id, name, phase, progress FROM projects').fetchall()
+        projs = c.execute('SELECT id, name, progress FROM projects').fetchall()
         cols = st.columns(4) 
         for i, p in enumerate(projs):
             with cols[i % 4]:
                 with st.container(border=True):
                     st.write(f"**{p[1]}**")
-                    st.caption(f"Phase: {p[2]}")
-                    st.progress(p[3]/100)
                     if st.button("Open", key=f"v_{p[0]}", use_container_width=True):
                         st.session_state.active_project_id = p[0]
                         st.rerun()
     else:
-        # PROJECT DETAIL VIEW
+        # Detail view
         p_id = st.session_state.active_project_id
         p_data = c.execute('SELECT * FROM projects WHERE id = ?', (p_id,)).fetchone()
-        
         st.title(f"📍 {p_data[1]}")
-        col_left, col_right = st.columns([1, 1])
-        with col_left:
-            if st.button("⬅️ Back"):
-                st.session_state.active_project_id = None
-                st.rerun()
-            st.subheader("Details")
-            st.write(f"**Duration:** {p_data[2]}")
-            st.write(f"**Current Phase:** {p_data[3]}")
-            st.progress(p_data[4]/100)
-        
-        with col_right:
-            st.subheader("Chat")
-            chat_box = st.container(height=400, border=True)
-            msgs = c.execute('SELECT user, msg FROM project_chat WHERE project_id = ?', (p_id,)).fetchall()
-            for m in msgs: chat_box.write(f"**{m[0]}**: {m[1]}")
-            
-            chat_input = st.text_input("Message", key="msg_input")
-            if st.button("Send"):
-                if chat_input:
-                    c.execute('INSERT INTO project_chat (project_id, user, msg) VALUES (?,?,?)', (p_id, "Admin", chat_input))
-                    conn.commit()
-                    st.rerun()
+        if st.button("⬅️ Back"):
+            st.session_state.active_project_id = None
+            st.rerun()
 
 elif page == "👥 Employees":
     st.title("Employees")
-    new_emp = st.text_input("Register Personnel")
-    if st.button("Add"):
-        c.execute('INSERT INTO employees (name) VALUES (?)', (new_emp,))
-        conn.commit()
-        st.rerun()
     emps = c.execute('SELECT name FROM employees').fetchall()
     for e in emps: st.write(f"• {e[0]}")
 
 else:
     st.title(page)
-    st.info(f"The {page} dashboard is ready for desktop data entry.")
+    st.info(f"The {page} dashboard is ready.")
