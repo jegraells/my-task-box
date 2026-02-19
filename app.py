@@ -32,6 +32,25 @@ st.markdown("""
         font-size: 14px;
     }
 
+    /* --- FIX: Hiding 'keyboard_double_arrow' and styling the toggle --- */
+    button[kind="headerNoPadding"] {
+        color: #24292e !important;
+    }
+    /* This specifically targets the text-based icon that was glitching */
+    span[data-testid="stSidebarCollapseIcon"] {
+        visibility: hidden;
+        position: relative;
+    }
+    span[data-testid="stSidebarCollapseIcon"]::after {
+        content: "≡"; /* Using a clean 'hamburger' icon instead of the text */
+        visibility: visible;
+        position: absolute;
+        left: 0;
+        font-size: 24px;
+        color: #24292e;
+        top: -10px;
+    }
+
     /* Sidebar Background */
     [data-testid="stSidebar"] {
         background-color: #EFEFDB !important;
@@ -40,7 +59,6 @@ st.markdown("""
     }
 
     /* KILL ALL DEFAULT BUTTON STYLING */
-    /* This removes the "dark gray" box you are seeing */
     div.stButton > button {
         background-color: transparent !important;
         color: #24292e !important;
@@ -55,7 +73,6 @@ st.markdown("""
         display: block !important;
     }
 
-    /* Subtle Hover (Light Gray/Navy tint) - No moving/popping */
     div.stButton > button:hover {
         background-color: rgba(30, 41, 59, 0.08) !important;
         color: #000 !important;
@@ -72,12 +89,10 @@ st.markdown("""
         display: block !important;
     }
 
-    /* Compact Sidebar spacing */
     [data-testid="stSidebarUserContent"] {
         padding-top: 1rem;
     }
     
-    /* Column and Header Spacing */
     div[data-testid="stColumn"] { padding: 15px !important; }
     h1 { font-size: 22px !important; font-weight: 600 !important; margin-bottom: 20px !important; }
 
@@ -86,7 +101,8 @@ st.markdown("""
 
 # --- 4. SIDEBAR NAVIGATION ---
 with st.sidebar:
-    st.title("📂 My-Task-Box")
+    # Header Icon + Title
+    st.markdown("### 📦 My-Task-Box")
     st.write("") 
     
     menu_options = [
@@ -102,13 +118,10 @@ with st.sidebar:
         ("🏠 Residential", "🏠 Residential")
     ]
 
-    # Clean Navigation Logic
     for label, name in menu_options:
         if st.session_state.page == name:
-            # Selected Item: Pink highlight, no button needed to stay pink
             st.markdown(f'<div class="active-highlight">{label}</div>', unsafe_allow_html=True)
         else:
-            # Unselected Items: Totally transparent buttons
             if st.button(label, key=f"nav_{name}"):
                 st.session_state.page = name
                 st.rerun()
