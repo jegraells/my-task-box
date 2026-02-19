@@ -20,11 +20,10 @@ st.markdown("""
     /* Global Styles */
     .stApp { background-color: #F5F5DC; }
     
-    /* Charcoal Navy Blend & Inter Font (Gemini Style) */
+    /* Charcoal Navy Blend & Inter Font */
     html, body, [class*="st-"], p, div {
         color: #24292e !important;
         font-family: 'Inter', -apple-system, sans-serif !important;
-        line-height: 1.8 !important;
     }
 
     /* Sidebar Background */
@@ -33,8 +32,7 @@ st.markdown("""
         border-right: 1px solid #d0d7de;
     }
 
-    /* THE CLEAN TEXT MENU FIX */
-    /* Strips all default Streamlit button styling */
+    /* THE CLEAN TEXT MENU */
     div.stButton > button {
         background-color: transparent !important;
         color: #24292e !important;
@@ -50,26 +48,27 @@ st.markdown("""
         margin: 2px 0 !important;
     }
 
-    /* Hover effect: Pop and slight blue-gray tint */
+    /* Hover effect */
     div.stButton > button:hover {
         background-color: rgba(30, 41, 59, 0.05) !important;
         padding-left: 25px !important;
         color: #0f172a !important;
     }
 
-    /* THE PINK HIGHLIGHT FIX */
-    /* This targets the specific div we wrap around the active button */
-    .active-wrapper button {
+    /* --- THE PINK FIX --- */
+    /* We target the button specifically when it's inside our 'active' wrapper */
+    .active-wrapper div.stButton > button {
         background-color: #FFC0CB !important; /* Pink */
         color: #000000 !important;
         font-weight: 700 !important;
         border-radius: 6px !important;
+        padding-left: 20px !important;
     }
 
-    /* Header Spacing to prevent overlap */
-    h1 { margin-bottom: 30px !important; margin-top: 10px !important; font-weight: 600 !important; }
+    /* Fix Header Spacing */
+    h1 { margin-bottom: 30px !important; font-weight: 600 !important; }
     
-    /* Fix for column padding */
+    /* Fix Column Overlap */
     div[data-testid="stColumn"] {
         padding: 20px !important;
     }
@@ -86,21 +85,20 @@ with st.sidebar:
         "🏢 Commercial", "🏠 Residential"
     ]
     
-    # Initialize page state
     if 'page' not in st.session_state:
         st.session_state.page = "🏗️ Projects"
 
-    # Create buttons with a conditional CSS wrapper for the pink highlight
     for option in menu_options:
+        # Check if this is the active page
         if st.session_state.page == option:
-            # If active, wrap in a div that our CSS targets for pink
-            st.markdown('<div class="active-wrapper">', unsafe_allow_html=True)
+            # Wrap the active button in the pink-triggering div
+            st.markdown(f'<div class="active-wrapper">', unsafe_allow_html=True)
             if st.button(option, key=f"active_{option}"):
                 st.session_state.page = option
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
         else:
-            # If not active, just show the normal transparent button
+            # Normal button
             if st.button(option, key=f"nav_{option}"):
                 st.session_state.page = option
                 st.rerun()
