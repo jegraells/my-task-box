@@ -1,7 +1,7 @@
 import streamlit as st
 import sqlite3
 
-# --- 1. DATABASE SETUP (v6) ---
+# --- 1. DATABASE SETUP ---
 conn = sqlite3.connect('tasks_v6.db', check_same_thread=False)
 c = conn.cursor()
 c.execute('CREATE TABLE IF NOT EXISTS employees (id INTEGER PRIMARY KEY, name TEXT)')
@@ -15,105 +15,98 @@ conn.commit()
 # --- 2. PAGE CONFIG & DESIGN ---
 st.set_page_config(page_title="My-Task-Box", page_icon="📦", layout="wide")
 
-st.markdown("""
+# Theme Colors
+bg_beige = "#F5F5DC"
+sidebar_beige = "#EFEFDB"
+charcoal_navy = "#1e293b"
+pink_highlight = "#FFC0CB"
+
+st.markdown(f"""
     <style>
-    /* 1. Global Background (Beige) */
-    .stApp {
-        background-color: #F5F5DC;
-    }
+    /* Global Styles */
+    .stApp {{
+        background-color: {bg_beige};
+    }}
     
-    /* 2. Global Text Color (Charcoal Navy Blend) */
-    html, body, [class*="st-"], p, div, label {
-        color: #1e293b !important; 
-        font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
-        font-size: 14px;
-        line-height: 1.8;
-    }
+    html, body, [class*="st-"], p, div {{
+        color: {charcoal_navy} !important;
+        font-family: 'Inter', sans-serif !important;
+    }}
 
-    /* 3. Titles */
-    h1, h2, h3 {
-        color: #0f172a !important; 
-        font-weight: 600 !important;
-        margin-bottom: 1.5rem !important;
-    }
-
-    /* 4. Sidebar Styling - Ensuring visibility */
-    [data-testid="stSidebar"] {
-        background-color: #EFEFDB !important;
+    /* Sidebar Styling */
+    [data-testid="stSidebar"] {{
+        background-color: {sidebar_beige} !important;
         border-right: 1px solid #cbd5e1;
-    }
+    }}
 
-    /* HIDE RADIO BUTTON CIRCLES ONLY - KEEP TEXT VISIBLE */
-    [data-testid="stWidgetLabel"] { display: none; }
-    
-    div[role="radiogroup"] label[data-baseweb="radio"] div:first-child {
-        display: none !important; 
-    }
-
-    /* 5. MENU INTERACTION (Hover & Click) */
-    div[role="radiogroup"] > label[data-baseweb="radio"] {
-        background-color: transparent;
-        padding: 12px 20px !important;
+    /* CUSTOM MENU BUTTONS (Replacing the broken radio) */
+    .menu-item {{
+        display: block;
+        padding: 12px 20px;
+        margin: 5px 0;
+        color: {charcoal_navy};
+        text-decoration: none;
         border-radius: 8px;
-        width: 100%;
         transition: all 0.2s ease;
-        cursor: pointer;
+        font-weight: 500;
+        background: none;
         border: none;
-        display: block !important;
-    }
+        width: 100%;
+        text-align: left;
+        cursor: pointer;
+    }}
 
-    /* Ensure the text inside the label is dark navy and visible */
-    div[role="radiogroup"] > label[data-baseweb="radio"] div[data-testid="stMarkdownContainer"] p {
-        color: #0f172a !important; 
-        font-weight: 500 !important;
-        font-size: 14px !important;
-    }
+    .menu-item:hover {{
+        background-color: rgba(30, 41, 59, 0.08);
+        padding-left: 28px; /* The "Pop" effect */
+        color: #000 !important;
+    }}
 
-    /* Mouse Hover Reaction */
-    div[role="radiogroup"] > label[data-baseweb="radio"]:hover {
-        background-color: rgba(30, 41, 59, 0.08) !important;
-        padding-left: 25px !important; 
-    }
-
-    /* Pink Highlight when Selected */
-    div[role="radiogroup"] > label[data-baseweb="radio"]:has(input:checked) {
-        background-color: #FFC0CB !important; 
-    }
-    
-    div[role="radiogroup"] > label[data-baseweb="radio"]:has(input:checked) p {
-        color: #000000 !important;
+    .active-menu {{
+        background-color: {pink_highlight} !important;
         font-weight: 700 !important;
-    }
+        color: #000 !important;
+    }}
 
-    /* 6. Spacing Fix for Columns */
-    div[data-testid="stColumn"] {
-        padding: 2rem !important;
-        background-color: rgba(255, 255, 255, 0.4); 
-        border-radius: 12px;
-    }
+    /* Fix column overlap */
+    div[data-testid="stColumn"] {{
+        padding: 20px !important;
+    }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. SIDEBAR ---
+# --- 3. SIDEBAR NAVIGATION ---
 with st.sidebar:
     st.title("📂 My-Task-Box")
-    page = st.radio("Navigation", [
+    st.write("---")
+    
+    # Define our menu items
+    menu_options = [
         "🏗️ Projects", "👥 Employees", "✅ Tasks", "📄 Licenses & Permits",
         "🏦 Bonds", "💰 Payroll", "👔 HR", "🔍 Exploration",
         "🏢 Commercial", "🏠 Residential"
-    ])
-    st.divider()
+    ]
+    
+    # Initialize page in session state
+    if 'page' not in st.session_state:
+        st.session_state.page = "🏗️ Projects"
 
-# Session State
-if 'active_project_id' not in st.session_state:
-    st.session_state.active_project_id = None
+    # Create the buttons manually for total control
+    for option in menu_options:
+        is_active = "active-menu" if st.session_state.page == option else ""
+        if st.button(option, key=f"menu_{option}", use_container_width=True, help=f"Go to {option}"):
+            st.session_state.page = option
+            st.rerun()
 
 # --- 4. NAVIGATION LOGIC ---
+page = st.session_state.page
+
+if 'active_project_id' not in st.session_state:
+    st.session_state.active_project_id = None
 
 if page == "🏗️ Projects":
     if st.session_state.active_project_id is None:
         st.title("Projects Dashboard")
-        
         with st.expander("➕ Create New Project"):
             p_name = st.text_input("Project Name")
             p_dur = st.text_input("Estimated Duration")
@@ -126,8 +119,6 @@ if page == "🏗️ Projects":
                     conn.commit()
                     st.rerun()
 
-        st.divider()
-        
         projs = c.execute('SELECT id, name, phase, progress FROM projects').fetchall()
         cols = st.columns(3)
         for i, p in enumerate(projs):
@@ -145,32 +136,24 @@ if page == "🏗️ Projects":
         p_data = c.execute('SELECT * FROM projects WHERE id = ?', (p_id,)).fetchone()
         
         st.title(f"📍 {p_data[1]}")
-        
         col_left, col_right = st.columns([1, 1])
-
         with col_left:
             if st.button("⬅️ Back to Dashboard"):
                 st.session_state.active_project_id = None
                 st.rerun()
-            
             st.subheader("📋 Job Details")
             st.write(f"⏱️ **Est. Duration:** {p_data[2]}")
             st.write(f"🏗️ **Current Phase:** {p_data[3]}")
             st.write(f"📈 **Phase Progress:** {p_data[4]}%")
             st.progress(p_data[4]/100)
-            
-            st.divider()
-            st.write("**Next Phases:** TBD")
-            st.write("**Employees Involved:** Admin")
-
+        
         with col_right:
             st.subheader("💬 Project Chat")
-            chat_box = st.container(height=450, border=True)
+            chat_box = st.container(height=400, border=True)
             msgs = c.execute('SELECT user, msg FROM project_chat WHERE project_id = ?', (p_id,)).fetchall()
-            for m in msgs:
-                chat_box.write(f"**{m[0]}**: {m[1]}")
+            for m in msgs: chat_box.write(f"**{m[0]}**: {m[1]}")
             
-            chat_input = st.text_input("Message", placeholder="Type here...", key="msg_input")
+            chat_input = st.text_input("Message", key="msg_input")
             if st.button("Send"):
                 if chat_input:
                     c.execute('INSERT INTO project_chat (project_id, user, msg) VALUES (?,?,?)', (p_id, "Admin", chat_input))
@@ -185,8 +168,7 @@ elif page == "👥 Employees":
         conn.commit()
         st.rerun()
     emps = c.execute('SELECT name FROM employees').fetchall()
-    for e in emps:
-        st.write(f"• {e[0]}")
+    for e in emps: st.write(f"• {e[0]}")
 
 else:
     st.title(page)
