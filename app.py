@@ -15,13 +15,12 @@ conn.commit()
 # --- 2. PAGE CONFIG & MODERN DESIGN ---
 st.set_page_config(page_title="My-Task-Box", page_icon="📦", layout="wide")
 
-# Styling to strip away the "Button" look and fix the overlap
 st.markdown("""
     <style>
     /* Global Styles */
     .stApp { background-color: #F5F5DC; }
     
-    /* Charcoal Navy & Gemini-style Font */
+    /* Charcoal Navy Blend & Inter Font (Gemini Style) */
     html, body, [class*="st-"], p, div {
         color: #24292e !important;
         font-family: 'Inter', -apple-system, sans-serif !important;
@@ -34,8 +33,8 @@ st.markdown("""
         border-right: 1px solid #d0d7de;
     }
 
-    /* THE TEXT-ONLY MENU FIX */
-    /* This removes all the gray button styling */
+    /* THE CLEAN TEXT MENU FIX */
+    /* Strips all default Streamlit button styling */
     div.stButton > button {
         background-color: transparent !important;
         color: #24292e !important;
@@ -48,32 +47,32 @@ st.markdown("""
         box-shadow: none !important;
         display: block !important;
         transition: all 0.2s ease-in-out !important;
+        margin: 2px 0 !important;
     }
 
-    /* Hover effect: Pop and slight blue tint */
+    /* Hover effect: Pop and slight blue-gray tint */
     div.stButton > button:hover {
-        background-color: rgba(0, 51, 102, 0.05) !important;
+        background-color: rgba(30, 41, 59, 0.05) !important;
         padding-left: 25px !important;
-        color: #003366 !important;
+        color: #0f172a !important;
     }
 
-    /* The Pink Highlight for the active page */
-    /* We use a special attribute selector for the active state */
-    .active-btn {
-        background-color: #FFC0CB !important;
+    /* THE PINK HIGHLIGHT FIX */
+    /* This targets the specific div we wrap around the active button */
+    .active-wrapper button {
+        background-color: #FFC0CB !important; /* Pink */
         color: #000000 !important;
         font-weight: 700 !important;
         border-radius: 6px !important;
     }
 
-    /* Spacing between menu items */
-    [data-testid="stSidebarUserContent"] {
-        padding-top: 1rem;
-    }
-    
     /* Header Spacing to prevent overlap */
-    h1 { margin-bottom: 30px !important; margin-top: 10px !important; }
-
+    h1 { margin-bottom: 30px !important; margin-top: 10px !important; font-weight: 600 !important; }
+    
+    /* Fix for column padding */
+    div[data-testid="stColumn"] {
+        padding: 20px !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -87,19 +86,22 @@ with st.sidebar:
         "🏢 Commercial", "🏠 Residential"
     ]
     
+    # Initialize page state
     if 'page' not in st.session_state:
         st.session_state.page = "🏗️ Projects"
 
+    # Create buttons with a conditional CSS wrapper for the pink highlight
     for option in menu_options:
-        # If this is the current page, we'll wrap it in a special div for the pink style
         if st.session_state.page == option:
-            st.markdown('<div class="active-btn">', unsafe_allow_html=True)
-            if st.button(option, key=f"btn_{option}"):
+            # If active, wrap in a div that our CSS targets for pink
+            st.markdown('<div class="active-wrapper">', unsafe_allow_html=True)
+            if st.button(option, key=f"active_{option}"):
                 st.session_state.page = option
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
         else:
-            if st.button(option, key=f"btn_{option}"):
+            # If not active, just show the normal transparent button
+            if st.button(option, key=f"nav_{option}"):
                 st.session_state.page = option
                 st.rerun()
 
@@ -108,7 +110,6 @@ page = st.session_state.page
 if 'active_project_id' not in st.session_state:
     st.session_state.active_project_id = None
 
-# Logic for different pages (Projects, Employees, etc.)
 if page == "🏗️ Projects":
     if st.session_state.active_project_id is None:
         st.title("Projects Dashboard")
