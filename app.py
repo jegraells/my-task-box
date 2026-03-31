@@ -296,7 +296,7 @@ def get_db():
     retries = 5
     for attempt in range(retries):
         try:
-            conn = psycopg2.connect(db_url, connect_timeout=10)
+            conn = psycopg2.connect(db_url, connect_timeout=10, sslmode='require')
             conn.autocommit = False
             break
         except Exception as e:
