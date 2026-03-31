@@ -1,5 +1,7 @@
 import streamlit as st
-import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import time
 import hashlib
 from datetime import datetime, date, timedelta
 
@@ -286,44 +288,60 @@ footer                          { display: none !important; }
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────
-# DATABASE
+# DATABASE — Supabase / PostgreSQL
 # ─────────────────────────────────────────
 @st.cache_resource
 def get_db():
-    conn = sqlite3.connect('taskbox.db', check_same_thread=False)
+    db_url = st.secrets["database"]["url"]
+    retries = 5
+    for attempt in range(retries):
+        try:
+            conn = psycopg2.connect(db_url, connect_timeout=10)
+            conn.autocommit = False
+            break
+        except Exception as e:
+            if attempt < retries - 1:
+                time.sleep(2 ** attempt)
+            else:
+                st.error(f"Could not connect to database: {e}")
+                st.stop()
+
     c = conn.cursor()
 
     c.execute('''CREATE TABLE IF NOT EXISTS employees (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id   SERIAL PRIMARY KEY,
         name TEXT NOT NULL UNIQUE
     )''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS projects (
-        id               INTEGER PRIMARY KEY AUTOINCREMENT,
-        name             TEXT NOT NULL,
-        category         TEXT,
-        est_duration     TEXT,
-        start_date       TEXT,
-        created_by       TEXT,
-        created_at       TEXT
+        id           SERIAL PRIMARY KEY,
+        name         TEXT NOT NULL,
+        category     TEXT,
+        est_duration TEXT,
+        start_date   TEXT,
+        created_by   TEXT,
+        created_at   TEXT,
+        completed    INTEGER DEFAULT 0,
+        completed_by TEXT,
+        completed_at TEXT
     )''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS project_participants (
-        project_id  INTEGER,
-        employee    TEXT
+        project_id INTEGER,
+        employee   TEXT
     )''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS tasks (
-        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        id         SERIAL PRIMARY KEY,
         task_name  TEXT NOT NULL,
         project_id INTEGER,
-        status     TEXT DEFAULT "Open",
+        status     TEXT DEFAULT 'Open',
         created_by TEXT,
         created_at TEXT
     )''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS activity_log (
-        id        INTEGER PRIMARY KEY AUTOINCREMENT,
+        id        SERIAL PRIMARY KEY,
         action    TEXT,
         item_type TEXT,
         item_name TEXT,
@@ -333,7 +351,7 @@ def get_db():
     )''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS phases (
-        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        id         SERIAL PRIMARY KEY,
         project_id INTEGER,
         phase_name TEXT,
         equipment  TEXT,
@@ -343,7 +361,7 @@ def get_db():
     )''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS chat_messages (
-        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        id         SERIAL PRIMARY KEY,
         project_id INTEGER,
         sender     TEXT,
         message    TEXT,
@@ -351,61 +369,61 @@ def get_db():
     )''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS phase_progress (
-        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        id         SERIAL PRIMARY KEY,
         phase_id   INTEGER,
         status     TEXT,
         updated_by TEXT,
         updated_at TEXT
     )''')
 
-    # ── Migrations: safely add new columns to existing DBs ──
-    proj_cols = [row[1] for row in c.execute("PRAGMA table_info(projects)").fetchall()]
-    if "est_duration" not in proj_cols:
-        c.execute("ALTER TABLE projects ADD COLUMN est_duration TEXT")
-    if "start_date" not in proj_cols:
-        c.execute("ALTER TABLE projects ADD COLUMN start_date TEXT")
-
-    log_cols = [row[1] for row in c.execute("PRAGMA table_info(activity_log)").fetchall()]
-    if "extra" not in log_cols:
-        c.execute("ALTER TABLE activity_log ADD COLUMN extra TEXT")
-
     c.execute('''CREATE TABLE IF NOT EXISTS accounting (
-        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        id           SERIAL PRIMARY KEY,
         project_id   INTEGER UNIQUE,
         project_name TEXT,
         category     TEXT,
         created_by   TEXT,
         completed_by TEXT,
         completed_at TEXT,
-        billed       TEXT DEFAULT "Not Completed",
-        received     TEXT DEFAULT "No"
+        billed       TEXT DEFAULT 'Not Completed',
+        received     TEXT DEFAULT 'No'
     )''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS accounting_chat (
-        id           INTEGER PRIMARY KEY AUTOINCREMENT,
-        project_id   INTEGER,
-        sender       TEXT,
-        message      TEXT,
-        sent_at      TEXT
+        id         SERIAL PRIMARY KEY,
+        project_id INTEGER,
+        sender     TEXT,
+        message    TEXT,
+        sent_at    TEXT
     )''')
 
-    # ── Migrations ──
-    proj_cols2 = [row[1] for row in c.execute("PRAGMA table_info(projects)").fetchall()]
-    if "completed" not in proj_cols2:
-        c.execute("ALTER TABLE projects ADD COLUMN completed INTEGER DEFAULT 0")
-    if "completed_by" not in proj_cols2:
-        c.execute("ALTER TABLE projects ADD COLUMN completed_by TEXT")
-    if "completed_at" not in proj_cols2:
-        c.execute("ALTER TABLE projects ADD COLUMN completed_at TEXT")
-
-    # Seed some employees
+    # Seed default employees
     for name in ["Alice", "Bob", "Carlos", "Diana", "Eve", "Frank", "Grace", "Guest"]:
-        c.execute("INSERT OR IGNORE INTO employees (name) VALUES (?)", (name,))
+        c.execute("INSERT INTO employees (name) VALUES (%s) ON CONFLICT (name) DO NOTHING", (name,))
 
     conn.commit()
     return conn, c
 
-conn, c = get_db()
+def get_fresh_cursor():
+    """Get a fresh cursor, reconnecting if the connection dropped."""
+    conn, c = get_db()
+    try:
+        c.execute("SELECT 1")
+    except Exception:
+        get_db.clear()
+        conn, c = get_db()
+    return conn, c
+
+conn, c = get_fresh_cursor()
+
+def db():
+    """Always return a fresh (conn, cursor) — auto-reconnects on drop."""
+    global conn, c
+    try:
+        c.execute("SELECT 1")
+    except Exception:
+        get_db.clear()
+        conn, c = get_db()
+    return conn, c
 
 # ─────────────────────────────────────────
 # HELPERS
@@ -415,7 +433,7 @@ def get_now():
 
 def log_activity(action, item_type, item_name, done_by, extra=""):
     c.execute(
-        'INSERT INTO activity_log (action, item_type, item_name, done_by, done_at, extra) VALUES (?,?,?,?,?,?)',
+        'INSERT INTO activity_log (action, item_type, item_name, done_by, done_at, extra) VALUES (%s,%s,%s,%s,%s,%s)',
         (action, item_type, item_name, done_by, get_now(), extra)
     )
     conn.commit()
@@ -663,7 +681,7 @@ elif page == "New Task":
         if task_name.strip():
             proj_id = project_map.get(proj_choice) if proj_choice != "— None —" else None
             c.execute(
-                'INSERT INTO tasks (task_name, project_id, status, created_by, created_at) VALUES (?,?,?,?,?)',
+                'INSERT INTO tasks (task_name, project_id, status, created_by, created_at) VALUES (%s,%s,%s,%s,%s)',
                 (task_name.strip(), proj_id, status, USERNAME, get_now())
             )
             conn.commit()
@@ -732,12 +750,12 @@ elif page == "New Project":
         if proj_name.strip():
             c.execute(
                 '''INSERT INTO projects (name, category, est_duration, start_date, created_by, created_at)
-                   VALUES (?,?,?,?,?,?)''',
+                   VALUES (%s,%s,%s,%s,%s,%s) RETURNING id''',
                 (proj_name.strip(), proj_cat, est_duration.strip(),
                  str(start_date), USERNAME, get_now())
             )
+            proj_id = c.fetchone()[0]
             conn.commit()
-            proj_id = c.lastrowid
 
             # Add creator as participant if not already
             all_parts = list(st.session_state.participants)
@@ -746,7 +764,7 @@ elif page == "New Project":
 
             for emp in all_parts:
                 c.execute(
-                    "INSERT INTO project_participants (project_id, employee) VALUES (?,?)",
+                    "INSERT INTO project_participants (project_id, employee) VALUES (%s,%s)",
                     (proj_id, emp)
                 )
             conn.commit()
@@ -908,15 +926,15 @@ elif page == "Project Detail" and st.session_state.active_project:
                         for i, step in enumerate(PROGRESS_STEPS):
                             if prog_cols[i].button(step, key=f"prog_{ph_id}_{step}"):
                                 c.execute(
-                                    "INSERT INTO phase_progress (phase_id, status, updated_by, updated_at) VALUES (?,?,?,?)",
+                                    "INSERT INTO phase_progress (phase_id, status, updated_by, updated_at) VALUES (%s,%s,%s,%s)",
                                     (ph_id, step, USERNAME, get_now())
                                 )
                                 conn.commit()
                                 st.rerun()
                         # Delete phase button in last column
                         if prog_cols[-1].button("🗑️", key=f"del_phase_{ph_id}", help="Delete this phase"):
-                            c.execute("DELETE FROM phases WHERE id=?", (ph_id,))
-                            c.execute("DELETE FROM phase_progress WHERE phase_id=?", (ph_id,))
+                            c.execute("DELETE FROM phases WHERE id=%s", (ph_id,))
+                            c.execute("DELETE FROM phase_progress WHERE phase_id=%s", (ph_id,))
                             conn.commit()
                             st.rerun()
                         st.markdown("<div style='margin-bottom:8px;'></div>", unsafe_allow_html=True)
@@ -933,7 +951,7 @@ elif page == "Project Detail" and st.session_state.active_project:
 
                 if ph_submit and ph_name.strip():
                     c.execute(
-                        "INSERT INTO phases (project_id, phase_name, equipment, comments, added_by, added_at) VALUES (?,?,?,?,?,?)",
+                        "INSERT INTO phases (project_id, phase_name, equipment, comments, added_by, added_at) VALUES (%s,%s,%s,%s,%s,%s)",
                         (proj_id, ph_name.strip(), ph_equip.strip(), ph_comment.strip(), USERNAME, get_now())
                     )
                     conn.commit()
@@ -946,7 +964,7 @@ elif page == "Project Detail" and st.session_state.active_project:
             st.markdown("<hr style='border-color:#21262d;'>", unsafe_allow_html=True)
 
             # Check if already completed
-            proj_status = c.execute("SELECT completed, completed_by, completed_at FROM projects WHERE id=?", (proj_id,)).fetchone()
+            proj_status = c.execute("SELECT completed, completed_by, completed_at FROM projects WHERE id=%s", (proj_id,)).fetchone()
             is_completed = proj_status and proj_status[0] == 1
 
             if is_completed:
@@ -967,9 +985,9 @@ elif page == "Project Detail" and st.session_state.active_project:
                     log_activity("Completed", "Project", name, USERNAME)
                     # If qualifying category, create accounting entry
                     if category in ("Explorations", "Residential", "Commercial"):
-                        proj_creator = c.execute("SELECT created_by FROM projects WHERE id=?", (proj_id,)).fetchone()[0]
+                        proj_creator = c.execute("SELECT created_by FROM projects WHERE id=%s", (proj_id,)).fetchone()[0]
                         c.execute(
-                            "INSERT OR IGNORE INTO accounting (project_id, project_name, category, created_by, completed_by, completed_at) VALUES (?,?,?,?,?,?)",
+                            "INSERT OR IGNORE INTO accounting (project_id, project_name, category, created_by, completed_by, completed_at) VALUES (%s,%s,%s,%s,%s,%s)",
                             (proj_id, name, category, proj_creator, USERNAME, now)
                         )
                     conn.commit()
@@ -983,14 +1001,14 @@ elif page == "Project Detail" and st.session_state.active_project:
                     st.warning("⚠️ Are you sure? This will permanently delete the project and all its phases.")
                     c1, c2 = st.columns(2)
                     if c1.button("Yes, delete it", key="confirm_del_yes"):
-                        c.execute("DELETE FROM projects WHERE id=?", (proj_id,))
-                        c.execute("DELETE FROM project_participants WHERE project_id=?", (proj_id,))
+                        c.execute("DELETE FROM projects WHERE id=%s", (proj_id,))
+                        c.execute("DELETE FROM project_participants WHERE project_id=%s", (proj_id,))
                         # Delete all phases and their progress
-                        phase_ids = [r[0] for r in c.execute("SELECT id FROM phases WHERE project_id=?", (proj_id,)).fetchall()]
+                        phase_ids = [r[0] for r in c.execute("SELECT id FROM phases WHERE project_id=%s", (proj_id,)).fetchall()]
                         for pid2 in phase_ids:
-                            c.execute("DELETE FROM phase_progress WHERE phase_id=?", (pid2,))
-                        c.execute("DELETE FROM phases WHERE project_id=?", (proj_id,))
-                        c.execute("DELETE FROM chat_messages WHERE project_id=?", (proj_id,))
+                            c.execute("DELETE FROM phase_progress WHERE phase_id=%s", (pid2,))
+                        c.execute("DELETE FROM phases WHERE project_id=%s", (proj_id,))
+                        c.execute("DELETE FROM chat_messages WHERE project_id=%s", (proj_id,))
                         conn.commit()
                         st.session_state.confirm_delete = False
                         st.session_state.active_project = None
@@ -1088,7 +1106,7 @@ elif page == "Project Detail" and st.session_state.active_project:
 
                 if send_btn and chat_input.strip():
                     c.execute(
-                        "INSERT INTO chat_messages (project_id, sender, message, sent_at) VALUES (?,?,?,?)",
+                        "INSERT INTO chat_messages (project_id, sender, message, sent_at) VALUES (%s,%s,%s,%s)",
                         (proj_id, USERNAME, chat_input.strip(), get_now())
                     )
                     conn.commit()
@@ -1271,7 +1289,7 @@ elif page == "Accounting":
                             unsafe_allow_html=True
                         )
                         if b_cols[i].button(opt, key=f"billed_{opt}_{a_id}"):
-                            c.execute("UPDATE accounting SET billed=? WHERE id=?", (opt, a_id))
+                            c.execute("UPDATE accounting SET billed=%s WHERE id=%s", (opt, a_id))
                             conn.commit()
                             st.rerun()
 
@@ -1297,7 +1315,7 @@ elif page == "Accounting":
                             unsafe_allow_html=True
                         )
                         if r_cols[i].button(opt, key=f"recv_{opt}_{a_id}"):
-                            c.execute("UPDATE accounting SET received=? WHERE id=?", (opt, a_id))
+                            c.execute("UPDATE accounting SET received=%s WHERE id=%s", (opt, a_id))
                             conn.commit()
                             st.rerun()
 
@@ -1333,7 +1351,7 @@ elif page == "Accounting":
 
                     if send_btn and chat_input.strip():
                         c.execute(
-                            "INSERT INTO accounting_chat (project_id, sender, message, sent_at) VALUES (?,?,?,?)",
+                            "INSERT INTO accounting_chat (project_id, sender, message, sent_at) VALUES (%s,%s,%s,%s)",
                             (a_proj_id, USERNAME, chat_input.strip(), get_now())
                         )
                         conn.commit()
@@ -1387,7 +1405,7 @@ elif page == "Employees":
         if save_emp:
             if new_emp_name.strip():
                 try:
-                    c.execute("INSERT INTO employees (name) VALUES (?)", (new_emp_name.strip(),))
+                    c.execute("INSERT INTO employees (name) VALUES (%s)", (new_emp_name.strip(),))
                     conn.commit()
                     st.success(f"{new_emp_name.strip()} added!")
                     st.session_state.show_add_emp = False
