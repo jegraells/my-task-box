@@ -290,29 +290,24 @@ footer                          { display: none !important; }
 # ─────────────────────────────────────────
 # DATABASE — Supabase / PostgreSQL
 # ─────────────────────────────────────────
-@st.cache_resource
-def get_db():
-    db_url = st.secrets["database"]["url"]
-    retries = 5
-    for attempt in range(retries):
-        try:
-            conn = psycopg2.connect(db_url, connect_timeout=10, sslmode='require')
-            conn.autocommit = False
-            break
-        except Exception as e:
-            if attempt < retries - 1:
-                time.sleep(2 ** attempt)
-            else:
-                st.error(f"Could not connect to database: {e}")
-                st.stop()
 
+def make_conn():
+    """Always create a brand-new connection using secrets.toml."""
+    url = st.secrets["database"]["url"]
+    return psycopg2.connect(url, sslmode='require', connect_timeout=15,
+                            options='-c statement_timeout=30000')
+
+@st.cache_resource
+def init_db():
+    """Run schema setup exactly once per app boot."""
+    conn = make_conn()
+    conn.autocommit = True
     c = conn.cursor()
 
     c.execute('''CREATE TABLE IF NOT EXISTS employees (
         id   SERIAL PRIMARY KEY,
         name TEXT NOT NULL UNIQUE
     )''')
-
     c.execute('''CREATE TABLE IF NOT EXISTS projects (
         id           SERIAL PRIMARY KEY,
         name         TEXT NOT NULL,
@@ -325,12 +320,10 @@ def get_db():
         completed_by TEXT,
         completed_at TEXT
     )''')
-
     c.execute('''CREATE TABLE IF NOT EXISTS project_participants (
         project_id INTEGER,
         employee   TEXT
     )''')
-
     c.execute('''CREATE TABLE IF NOT EXISTS tasks (
         id         SERIAL PRIMARY KEY,
         task_name  TEXT NOT NULL,
@@ -339,7 +332,6 @@ def get_db():
         created_by TEXT,
         created_at TEXT
     )''')
-
     c.execute('''CREATE TABLE IF NOT EXISTS activity_log (
         id        SERIAL PRIMARY KEY,
         action    TEXT,
@@ -349,7 +341,6 @@ def get_db():
         done_at   TEXT,
         extra     TEXT
     )''')
-
     c.execute('''CREATE TABLE IF NOT EXISTS phases (
         id         SERIAL PRIMARY KEY,
         project_id INTEGER,
@@ -359,7 +350,6 @@ def get_db():
         added_by   TEXT,
         added_at   TEXT
     )''')
-
     c.execute('''CREATE TABLE IF NOT EXISTS chat_messages (
         id         SERIAL PRIMARY KEY,
         project_id INTEGER,
@@ -367,7 +357,6 @@ def get_db():
         message    TEXT,
         sent_at    TEXT
     )''')
-
     c.execute('''CREATE TABLE IF NOT EXISTS phase_progress (
         id         SERIAL PRIMARY KEY,
         phase_id   INTEGER,
@@ -375,7 +364,6 @@ def get_db():
         updated_by TEXT,
         updated_at TEXT
     )''')
-
     c.execute('''CREATE TABLE IF NOT EXISTS accounting (
         id           SERIAL PRIMARY KEY,
         project_id   INTEGER UNIQUE,
@@ -387,7 +375,6 @@ def get_db():
         billed       TEXT DEFAULT 'Not Completed',
         received     TEXT DEFAULT 'No'
     )''')
-
     c.execute('''CREATE TABLE IF NOT EXISTS accounting_chat (
         id         SERIAL PRIMARY KEY,
         project_id INTEGER,
@@ -395,44 +382,41 @@ def get_db():
         message    TEXT,
         sent_at    TEXT
     )''')
-
-    # Seed default employees
     for name in ["Alice", "Bob", "Carlos", "Diana", "Eve", "Frank", "Grace", "Guest"]:
         c.execute("INSERT INTO employees (name) VALUES (%s) ON CONFLICT (name) DO NOTHING", (name,))
+    c.close()
+    conn.close()
 
-    conn.commit()
+# Run schema setup once
+init_db()
+
+def get_conn():
+    """Fresh connection + cursor for every Streamlit rerun."""
+    conn = make_conn()
+    conn.autocommit = False
+    c = conn.cursor()
     return conn, c
 
-def get_fresh_cursor():
-    """Get a fresh cursor, reconnecting if the connection dropped."""
-    conn, c = get_db()
-    try:
-        c.execute("SELECT 1")
-    except Exception:
-        get_db.clear()
-        conn, c = get_db()
-    return conn, c
-
-conn, c = get_fresh_cursor()
-
-def db():
-    """Always return a fresh (conn, cursor) — auto-reconnects on drop."""
-    global conn, c
-    try:
-        c.execute("SELECT 1")
-    except Exception:
-        get_db.clear()
-        conn, c = get_db()
-    return conn, c
+conn, c = get_conn()
 
 # ─────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────
+def qall(cursor, sql, params=()):
+    """Execute and fetchall — psycopg2 execute() returns None unlike SQLite."""
+    cursor.execute(sql, params)
+    return cursor.fetchall()
+
+def qone(cursor, sql, params=()):
+    """Execute and fetchone."""
+    cursor.execute(sql, params)
+    return cursor.fetchone()
+
 def get_now():
     return datetime.now().strftime("%Y-%m-%d %H:%M")
 
 def log_activity(action, item_type, item_name, done_by, extra=""):
-    c.execute(
+    qall(c,
         'INSERT INTO activity_log (action, item_type, item_name, done_by, done_at, extra) VALUES (%s,%s,%s,%s,%s,%s)',
         (action, item_type, item_name, done_by, get_now(), extra)
     )
@@ -463,13 +447,13 @@ def avatars_row(names, size="sm"):
     return "".join(avatar_html(n, size) for n in names)
 
 def get_participants(project_id):
-    rows = c.execute(
-        "SELECT employee FROM project_participants WHERE project_id=?", (project_id,)
-    ).fetchall()
+    rows = qone(c,
+        "SELECT employee FROM project_participants WHERE project_id=%s", (project_id,)
+    )
     return [r[0] for r in rows]
 
 def all_employees():
-    return [r[0] for r in c.execute("SELECT name FROM employees ORDER BY name").fetchall()]
+    return [r[0] for r in qall(c, "SELECT name FROM employees ORDER BY name")]
 
 # ─────────────────────────────────────────
 # SESSION STATE
@@ -551,6 +535,8 @@ with st.sidebar:
 # ─────────────────────────────────────────
 # MAIN CONTENT
 # ─────────────────────────────────────────
+# Fresh connection every rerun — prevents stale cursor errors
+conn, c = get_conn()
 page = st.session_state.page
 
 # ══════════════════════════════════════════
@@ -566,9 +552,9 @@ if page == "Main Feed":
     DAY_NAMES  = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
     # Fetch all projects with start_date
-    all_projects = c.execute(
+    all_projects = qall(c, 
         "SELECT id, name, start_date FROM projects WHERE start_date IS NOT NULL AND start_date != ''"
-    ).fetchall()
+    )
 
     # Build calendar HTML — 7 columns
     cal_cols = st.columns(7)
@@ -617,9 +603,9 @@ if page == "Main Feed":
     st.markdown("<div style='font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#484f58;margin-bottom:10px;'>Recent Activity</div>", unsafe_allow_html=True)
 
     # ── Activity Log — single line per entry ──
-    logs = c.execute(
+    logs = qall(c, 
         "SELECT action, item_type, item_name, done_by, done_at, extra FROM activity_log ORDER BY done_at DESC"
-    ).fetchall()
+    )
 
     if not logs:
         st.markdown("""
@@ -668,7 +654,7 @@ elif page == "New Task":
     st.markdown("<div class='page-title'>＋ New Task</div>", unsafe_allow_html=True)
     st.markdown("<div class='page-subtitle'>Add a new task to track.</div>", unsafe_allow_html=True)
 
-    projects = c.execute("SELECT id, name FROM projects ORDER BY name").fetchall()
+    projects = qall(c, "SELECT id, name FROM projects ORDER BY name")
     project_map = {name: pid for pid, name in projects}
 
     with st.form("form_new_task", clear_on_submit=True):
@@ -680,7 +666,7 @@ elif page == "New Task":
     if submitted:
         if task_name.strip():
             proj_id = project_map.get(proj_choice) if proj_choice != "— None —" else None
-            c.execute(
+            qall(c,
                 'INSERT INTO tasks (task_name, project_id, status, created_by, created_at) VALUES (%s,%s,%s,%s,%s)',
                 (task_name.strip(), proj_id, status, USERNAME, get_now())
             )
@@ -784,9 +770,9 @@ elif page == "New Project":
 elif page == "Project Detail" and st.session_state.active_project:
     proj_id = st.session_state.active_project
     proj = c.execute(
-        "SELECT name, category, est_duration, start_date, created_by, created_at FROM projects WHERE id=?",
+        "SELECT name, category, est_duration, start_date, created_by, created_at FROM projects WHERE id=%s",
         (proj_id,)
-    ).fetchone()
+    )
 
     if not proj:
         st.error("Project not found.")
@@ -830,10 +816,10 @@ elif page == "Project Detail" and st.session_state.active_project:
 
             # ── Phases ──
             st.markdown("**Project Phases**")
-            phases = c.execute(
-                "SELECT id, phase_name, equipment, comments, added_by, added_at FROM phases WHERE project_id=? ORDER BY added_at",
+            phases = qone(c,
+                "SELECT id, phase_name, equipment, comments, added_by, added_at FROM phases WHERE project_id=%s ORDER BY added_at",
                 (proj_id,)
-            ).fetchall()
+            )
 
             PROGRESS_STEPS = ["Started", "25%", "50%", "75%", "Finished"]
             PROGRESS_COLORS = {
@@ -846,10 +832,10 @@ elif page == "Project Detail" and st.session_state.active_project:
 
             if phases:
                 for ph_id, ph_name, ph_equip, ph_comment, ph_by, ph_at in phases:
-                    latest_prog    = c.execute(
-                        "SELECT status, updated_by, updated_at FROM phase_progress WHERE phase_id=? ORDER BY updated_at DESC LIMIT 1",
+                    latest_prog    = qall(c,
+                        "SELECT status, updated_by, updated_at FROM phase_progress WHERE phase_id=%s ORDER BY updated_at DESC LIMIT 1",
                         (ph_id,)
-                    ).fetchone()
+                    )
                     current_status = latest_prog[0] if latest_prog else None
 
                     # Build each field only if it has content — no HTML leaking into text
@@ -925,7 +911,7 @@ elif page == "Project Detail" and st.session_state.active_project:
                         prog_cols = st.columns(len(PROGRESS_STEPS) + 1)
                         for i, step in enumerate(PROGRESS_STEPS):
                             if prog_cols[i].button(step, key=f"prog_{ph_id}_{step}"):
-                                c.execute(
+                                qone(c,
                                     "INSERT INTO phase_progress (phase_id, status, updated_by, updated_at) VALUES (%s,%s,%s,%s)",
                                     (ph_id, step, USERNAME, get_now())
                                 )
@@ -964,7 +950,7 @@ elif page == "Project Detail" and st.session_state.active_project:
             st.markdown("<hr style='border-color:#21262d;'>", unsafe_allow_html=True)
 
             # Check if already completed
-            proj_status = c.execute("SELECT completed, completed_by, completed_at FROM projects WHERE id=%s", (proj_id,)).fetchone()
+            proj_status = qone(c, "SELECT completed, completed_by, completed_at FROM projects WHERE id=%s", (proj_id,))
             is_completed = proj_status and proj_status[0] == 1
 
             if is_completed:
@@ -978,14 +964,14 @@ elif page == "Project Detail" and st.session_state.active_project:
                 if st.button("✅  Mark as Complete", key="complete_project", use_container_width=True):
                     now = get_now()
                     c.execute(
-                        "UPDATE projects SET completed=1, completed_by=?, completed_at=? WHERE id=?",
+                        "UPDATE projects SET completed=1, completed_by=%s, completed_at=%s WHERE id=%s",
                         (USERNAME, now, proj_id)
                     )
                     # Log to activity feed
                     log_activity("Completed", "Project", name, USERNAME)
                     # If qualifying category, create accounting entry
                     if category in ("Explorations", "Residential", "Commercial"):
-                        proj_creator = c.execute("SELECT created_by FROM projects WHERE id=%s", (proj_id,)).fetchone()[0]
+                        proj_creator = qone(c, "SELECT created_by FROM projects WHERE id=%s", (proj_id,))[0]
                         c.execute(
                             "INSERT OR IGNORE INTO accounting (project_id, project_name, category, created_by, completed_by, completed_at) VALUES (%s,%s,%s,%s,%s,%s)",
                             (proj_id, name, category, proj_creator, USERNAME, now)
@@ -1004,7 +990,7 @@ elif page == "Project Detail" and st.session_state.active_project:
                         c.execute("DELETE FROM projects WHERE id=%s", (proj_id,))
                         c.execute("DELETE FROM project_participants WHERE project_id=%s", (proj_id,))
                         # Delete all phases and their progress
-                        phase_ids = [r[0] for r in c.execute("SELECT id FROM phases WHERE project_id=%s", (proj_id,)).fetchall()]
+                        phase_ids = [r[0] for r in qall(c, "SELECT id FROM phases WHERE project_id=%s", (proj_id,))]
                         for pid2 in phase_ids:
                             c.execute("DELETE FROM phase_progress WHERE phase_id=%s", (pid2,))
                         c.execute("DELETE FROM phases WHERE project_id=%s", (proj_id,))
@@ -1023,9 +1009,9 @@ elif page == "Project Detail" and st.session_state.active_project:
 
             # ── Phase Timeline ──
             timeline_phases = c.execute(
-                "SELECT id, phase_name FROM phases WHERE project_id=? ORDER BY added_at",
+                "SELECT id, phase_name FROM phases WHERE project_id=%s ORDER BY added_at",
                 (proj_id,)
-            ).fetchall()
+            )
 
             if timeline_phases:
                 timeline_html = (
@@ -1035,10 +1021,10 @@ elif page == "Project Detail" and st.session_state.active_project:
                     '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:0;">'
                 )
                 for t_idx, (t_id, t_name) in enumerate(timeline_phases):
-                    t_prog = c.execute(
-                        "SELECT status FROM phase_progress WHERE phase_id=? ORDER BY updated_at DESC LIMIT 1",
+                    t_prog = qall(c,
+                        "SELECT status FROM phase_progress WHERE phase_id=%s ORDER BY updated_at DESC LIMIT 1",
                         (t_id,)
-                    ).fetchone()
+                    )
                     t_status = t_prog[0] if t_prog else None
 
                     # Ball color: green=current/in-progress, light blue=finished, grey=not started
@@ -1075,10 +1061,10 @@ elif page == "Project Detail" and st.session_state.active_project:
 
             st.markdown("**Project Chat**")
 
-            messages = c.execute(
-                "SELECT sender, message, sent_at FROM chat_messages WHERE project_id=? ORDER BY sent_at",
+            messages = qone(c,
+                "SELECT sender, message, sent_at FROM chat_messages WHERE project_id=%s ORDER BY sent_at",
                 (proj_id,)
-            ).fetchall()
+            )
 
             chat_html = "<div style='height:360px;overflow-y:auto;padding:8px;background:#0d1117;border:1px solid #21262d;border-radius:8px;margin-bottom:12px;'>"
             if messages:
@@ -1105,7 +1091,7 @@ elif page == "Project Detail" and st.session_state.active_project:
                     send_btn   = msg_cols[1].form_submit_button("Send")
 
                 if send_btn and chat_input.strip():
-                    c.execute(
+                    qall(c,
                         "INSERT INTO chat_messages (project_id, sender, message, sent_at) VALUES (%s,%s,%s,%s)",
                         (proj_id, USERNAME, chat_input.strip(), get_now())
                     )
@@ -1129,9 +1115,9 @@ elif page in ["Explorations", "Residential", "Commercial", "Licenses", "Bonds", 
     if page in ["Explorations", "Residential", "Commercial", "Licenses", "Bonds", "Payroll"]:
         # Active (not completed) projects
         rows = c.execute(
-            "SELECT id, name, created_by FROM projects WHERE category=? AND (completed IS NULL OR completed=0) ORDER BY created_at DESC",
+            "SELECT id, name, created_by FROM projects WHERE category=%s AND (completed IS NULL OR completed=0) ORDER BY created_at DESC",
             (page,)
-        ).fetchall()
+        )
 
         if rows:
             cols_per_row = 4
@@ -1162,10 +1148,10 @@ elif page in ["Explorations", "Residential", "Commercial", "Licenses", "Bonds", 
             """, unsafe_allow_html=True)
 
         # ── Completed Projects ──
-        completed_rows = c.execute(
-            "SELECT id, name, created_by, completed_by, completed_at FROM projects WHERE category=? AND completed=1 ORDER BY completed_at DESC",
+        completed_rows = qall(c,
+            "SELECT id, name, created_by, completed_by, completed_at FROM projects WHERE category=%s AND completed=1 ORDER BY completed_at DESC",
             (page,)
-        ).fetchall()
+        )
 
         if completed_rows:
             st.markdown("<br>", unsafe_allow_html=True)
@@ -1204,9 +1190,9 @@ elif page == "Accounting":
     st.markdown("<div class='page-title'>💼 Accounting</div>", unsafe_allow_html=True)
     st.markdown("<div class='page-subtitle'>Completed projects — billing and payment tracking.</div>", unsafe_allow_html=True)
 
-    acc_rows = c.execute(
+    acc_rows = qall(c, 
         "SELECT id, project_id, project_name, category, created_by, completed_by, completed_at, billed, received FROM accounting ORDER BY completed_at DESC"
-    ).fetchall()
+    )
 
     if not acc_rows:
         st.markdown("""
@@ -1220,10 +1206,10 @@ elif page == "Accounting":
         # Check if opening a specific accounting entry
         if st.session_state.get("active_accounting"):
             acc_id = st.session_state.active_accounting
-            entry  = c.execute(
-                "SELECT id, project_id, project_name, category, created_by, completed_by, completed_at, billed, received FROM accounting WHERE id=?",
+            entry  = qall(c,
+                "SELECT id, project_id, project_name, category, created_by, completed_by, completed_at, billed, received FROM accounting WHERE id=%s",
                 (acc_id,)
-            ).fetchone()
+            )
 
             if not entry:
                 st.error("Entry not found.")
@@ -1247,9 +1233,9 @@ elif page == "Accounting":
                         f'<span style="font-size:11px;color:#8b949e;align-self:center;">{p}</span>'
                         for p in participants
                     )
-                    orig_proj = c.execute(
-                        "SELECT est_duration, start_date FROM projects WHERE id=?", (a_proj_id,)
-                    ).fetchone()
+                    orig_proj = qone(c,
+                        "SELECT est_duration, start_date FROM projects WHERE id=%s", (a_proj_id,)
+                    )
                     est_dur   = orig_proj[0] if orig_proj else "—"
                     start_d   = orig_proj[1] if orig_proj else "—"
 
@@ -1322,9 +1308,9 @@ elif page == "Accounting":
                 with right_col:
                     st.markdown("**Project Chat**")
                     msgs = c.execute(
-                        "SELECT sender, message, sent_at FROM accounting_chat WHERE project_id=? ORDER BY sent_at",
+                        "SELECT sender, message, sent_at FROM accounting_chat WHERE project_id=%s ORDER BY sent_at",
                         (a_proj_id,)
-                    ).fetchall()
+                    )
 
                     chat_html = "<div style='height:400px;overflow-y:auto;padding:8px;background:#0d1117;border:1px solid #21262d;border-radius:8px;margin-bottom:12px;'>"
                     if msgs:
@@ -1465,13 +1451,13 @@ elif page == "Employees":
                 """, unsafe_allow_html=True)
 
                 # Get all projects this employee is participating in
-                emp_projects = c.execute("""
+                emp_projects = qall(c, """
                     SELECT p.id, p.name, p.category, p.created_by, p.created_at
                     FROM projects p
                     JOIN project_participants pp ON p.id = pp.project_id
-                    WHERE pp.employee = ?
+                    WHERE pp.employee = %s
                     ORDER BY p.created_at DESC
-                """, (emp,)).fetchall()
+                """, (emp,))
 
                 st.markdown(f"<div class='detail-label'>Projects ({len(emp_projects)})</div>", unsafe_allow_html=True)
 
