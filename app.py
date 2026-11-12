@@ -1,9 +1,17 @@
+deeps color change
+
 import streamlit as st
 import psycopg2
+import psycopg2.errors
 from psycopg2.extras import RealDictCursor
 import time
 import hashlib
+import html as _html
 from datetime import datetime, date, timedelta
+
+def esc(x):
+    """HTML-escape any user-typed text before it goes into markup."""
+    return "" if x is None else _html.escape(str(x))
 
 # ─────────────────────────────────────────
 # PAGE CONFIG
@@ -49,13 +57,13 @@ footer                          { display: none !important; }
 }
 .welcome-label {
     font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
-    text-transform: uppercase; color: #484f58; margin-bottom: 4px;
+    text-transform: uppercase; color: #6e7681; margin-bottom: 4px;
 }
 .welcome-name { font-size: 16px; font-weight: 700; color: #e6edf3; }
 
 .nav-section {
     font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
-    text-transform: uppercase; color: #484f58; padding: 12px 16px 4px 16px;
+    text-transform: uppercase; color: #6e7681; padding: 12px 16px 4px 16px;
 }
 
 [data-testid="stSidebar"] .stButton > button {
@@ -92,7 +100,7 @@ footer                          { display: none !important; }
     margin-bottom: 4px; font-family: 'Inter', sans-serif;
 }
 .page-subtitle {
-    font-size: 13px; color: #484f58;
+    font-size: 13px; color: #6e7681;
     margin-bottom: 28px; font-family: 'Inter', sans-serif;
 }
 
@@ -104,7 +112,7 @@ footer                          { display: none !important; }
 }
 .a-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
 .a-card-name { font-size: 14px; font-weight: 600; color: #e6edf3; }
-.a-card-meta { font-size: 12px; color: #484f58; }
+.a-card-meta { font-size: 12px; color: #6e7681; }
 .a-card-avatars { display: flex; gap: 4px; margin-top: 6px; }
 .badge {
     display: inline-block; font-size: 10px; font-weight: 700;
@@ -157,7 +165,7 @@ footer                          { display: none !important; }
     border-radius: 8px; padding: 20px;
     font-family: 'Inter', sans-serif;
 }
-.detail-label { font-size: 11px; color: #484f58; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px; }
+.detail-label { font-size: 11px; color: #6e7681; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px; }
 .detail-value { font-size: 14px; color: #e6edf3; margin-bottom: 14px; }
 
 /* ── Phase card ── */
@@ -167,7 +175,7 @@ footer                          { display: none !important; }
     font-family: 'Inter', sans-serif;
 }
 .phase-title { font-size: 13px; font-weight: 600; color: #e6edf3; margin-bottom: 4px; }
-.phase-meta  { font-size: 11px; color: #484f58; }
+.phase-meta  { font-size: 11px; color: #6e7681; }
 
 /* ── Chat ── */
 .chat-bubble {
@@ -177,8 +185,8 @@ footer                          { display: none !important; }
 }
 .chat-bubble.mine    { background: #1f4a24; color: #e6edf3; margin-left: auto; }
 .chat-bubble.theirs  { background: #21262d; color: #e6edf3; }
-.chat-sender { font-size: 10px; color: #484f58; margin-bottom: 2px; }
-.chat-time   { font-size: 10px; color: #484f58; margin-top: 2px; text-align: right; }
+.chat-sender { font-size: 10px; color: #6e7681; margin-bottom: 2px; }
+.chat-time   { font-size: 10px; color: #6e7681; margin-top: 2px; text-align: right; }
 
 /* ── Forms ── */
 .stTextInput > label, .stSelectbox > label, .stTextArea > label,
@@ -205,13 +213,13 @@ footer                          { display: none !important; }
 .stFormSubmitButton > button:hover { background-color: #2ea043 !important; }
 
 .empty-state {
-    text-align: center; padding: 80px 20px; color: #484f58;
+    text-align: center; padding: 80px 20px; color: #6e7681;
     font-family: 'Inter', sans-serif; font-size: 14px;
 }
 .empty-icon { font-size: 48px; margin-bottom: 12px; }
 .coming-soon {
     background: #161b22; border: 1px solid #21262d; border-radius: 8px;
-    padding: 40px; text-align: center; color: #484f58;
+    padding: 40px; text-align: center; color: #6e7681;
     font-family: 'Inter', sans-serif; font-size: 14px; margin-top: 16px;
 }
 .stAlert { background-color: #161b22 !important; border-radius: 6px !important; font-family: 'Inter', sans-serif !important; }
@@ -252,7 +260,7 @@ footer                          { display: none !important; }
     background: #21262d !important;
     border: 1px solid #30363d !important;
     border-radius: 4px !important;
-    color: #484f58 !important;
+    color: #6e7681 !important;
     font-size: 10px !important;
     font-weight: 600 !important;
     padding: 3px 0 !important;
@@ -292,111 +300,42 @@ footer                          { display: none !important; }
 # ─────────────────────────────────────────
 
 def make_conn():
-    """Always create a brand-new connection using secrets.toml."""
-    url = st.secrets["database"]["url"]
-    return psycopg2.connect(url, sslmode='require', connect_timeout=15,
-                            options='-c statement_timeout=30000')
+    """Open a PostgreSQL connection from Streamlit Secrets.
 
-@st.cache_resource
-def init_db():
-    """Run schema setup exactly once per app boot."""
-    conn = make_conn()
-    conn.autocommit = True
-    c = conn.cursor()
+    Supports two layouts of .streamlit/secrets.toml under [database]:
+      1) separate keys: host, port, user, password, dbname   (preferred)
+      2) a single connection string: url
+    """
+    if "database" not in st.secrets:
+        raise RuntimeError("The [database] section is missing from Streamlit Secrets.")
+    db = st.secrets["database"]
 
-    c.execute('''CREATE TABLE IF NOT EXISTS employees (
-        id   SERIAL PRIMARY KEY,
-        name TEXT NOT NULL UNIQUE
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS projects (
-        id           SERIAL PRIMARY KEY,
-        name         TEXT NOT NULL,
-        category     TEXT,
-        est_duration TEXT,
-        start_date   TEXT,
-        created_by   TEXT,
-        created_at   TEXT,
-        completed    INTEGER DEFAULT 0,
-        completed_by TEXT,
-        completed_at TEXT
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS project_participants (
-        project_id INTEGER,
-        employee   TEXT
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS tasks (
-        id         SERIAL PRIMARY KEY,
-        task_name  TEXT NOT NULL,
-        project_id INTEGER,
-        status     TEXT DEFAULT 'Open',
-        created_by TEXT,
-        created_at TEXT
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS activity_log (
-        id        SERIAL PRIMARY KEY,
-        action    TEXT,
-        item_type TEXT,
-        item_name TEXT,
-        done_by   TEXT,
-        done_at   TEXT,
-        extra     TEXT
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS phases (
-        id         SERIAL PRIMARY KEY,
-        project_id INTEGER,
-        phase_name TEXT,
-        equipment  TEXT,
-        comments   TEXT,
-        added_by   TEXT,
-        added_at   TEXT
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS chat_messages (
-        id         SERIAL PRIMARY KEY,
-        project_id INTEGER,
-        sender     TEXT,
-        message    TEXT,
-        sent_at    TEXT
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS phase_progress (
-        id         SERIAL PRIMARY KEY,
-        phase_id   INTEGER,
-        status     TEXT,
-        updated_by TEXT,
-        updated_at TEXT
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS accounting (
-        id           SERIAL PRIMARY KEY,
-        project_id   INTEGER UNIQUE,
-        project_name TEXT,
-        category     TEXT,
-        created_by   TEXT,
-        completed_by TEXT,
-        completed_at TEXT,
-        billed       TEXT DEFAULT 'Not Completed',
-        received     TEXT DEFAULT 'No'
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS accounting_chat (
-        id         SERIAL PRIMARY KEY,
-        project_id INTEGER,
-        sender     TEXT,
-        message    TEXT,
-        sent_at    TEXT
-    )''')
-    for name in ["Alice", "Bob", "Carlos", "Diana", "Eve", "Frank", "Grace", "Guest"]:
-        c.execute("INSERT INTO employees (name) VALUES (%s) ON CONFLICT (name) DO NOTHING", (name,))
-    c.close()
-    conn.close()
-
-# Run schema setup once
-init_db()
+    if "host" in db:
+        missing = [k for k in ("port", "user", "password", "dbname") if k not in db]
+        if missing:
+            raise RuntimeError("Missing database settings in Streamlit Secrets: " + ", ".join(missing))
+        return psycopg2.connect(
+            host=str(db["host"]), port=int(db["port"]), user=str(db["user"]),
+            password=str(db["password"]), dbname=str(db["dbname"]),
+            sslmode="require", connect_timeout=15,
+        )
+    if "url" in db:
+        return psycopg2.connect(db["url"], sslmode="require", connect_timeout=15)
+    raise RuntimeError("Streamlit Secrets [database] needs either host/port/user/password/dbname or url.")
 
 def get_conn():
-    """Fresh connection + cursor for every Streamlit rerun."""
-    conn = make_conn()
-    conn.autocommit = False
-    c = conn.cursor()
-    return conn, c
+    """Fresh connection per Streamlit rerun, in AUTOCOMMIT mode.
 
+    Autocommit prevents a bare SELECT from leaving an idle-in-transaction
+    connection open (which held ACCESS SHARE locks and blocked the schema
+    migration). Multi-statement writes wrap themselves in explicit
+    try/commit/rollback blocks.
+    """
+    conn = make_conn()
+    conn.autocommit = True
+    return conn, conn.cursor()
+
+# One connection per run (used by every helper below)
 conn, c = get_conn()
 
 # ─────────────────────────────────────────
@@ -413,14 +352,22 @@ def qone(cursor, sql, params=()):
     return cursor.fetchone()
 
 def get_now():
-    return datetime.now().strftime("%Y-%m-%d %H:%M")
+    """Real datetime — the *_at columns are timestamp now, not text."""
+    return datetime.now()
+
+def fmt_ts(ts):
+    """Render a timestamp for display, tolerating legacy text values."""
+    if ts is None:
+        return ""
+    if isinstance(ts, datetime):
+        return ts.strftime("%Y-%m-%d %H:%M")
+    return str(ts)
 
 def log_activity(action, item_type, item_name, done_by, extra=""):
-    qall(c,
+    c.execute(
         'INSERT INTO activity_log (action, item_type, item_name, done_by, done_at, extra) VALUES (%s,%s,%s,%s,%s,%s)',
         (action, item_type, item_name, done_by, get_now(), extra)
     )
-    conn.commit()
 
 AVATAR_COLORS = [
     "#e05252","#e07d52","#d4a843","#52a852","#52a8a8",
@@ -441,19 +388,86 @@ def avatar_html(name, size="sm"):
     color = avatar_color(name)
     initials = avatar_initials(name)
     css_class = f"avatar-{size}"
-    return f'<span class="{css_class}" style="background:{color};" title="{name}">{initials}</span>'
+    return f'<span class="{css_class}" style="background:{color};" title="{esc(name)}">{esc(initials)}</span>'
 
 def avatars_row(names, size="sm"):
     return "".join(avatar_html(n, size) for n in names)
 
+_part_cache = {}
+
 def get_participants(project_id):
-    rows = qone(c,
-        "SELECT employee FROM project_participants WHERE project_id=%s", (project_id,)
-    )
-    return [r[0] for r in rows]
+    """All participants are loaded once per page render, then served from memory."""
+    if not _part_cache:
+        _part_cache["__loaded__"] = True
+        for pid, emp in qall(c, "SELECT project_id, employee FROM project_participants ORDER BY employee"):
+            _part_cache.setdefault(pid, []).append(emp)
+    return list(_part_cache.get(project_id, []))
 
 def all_employees():
     return [r[0] for r in qall(c, "SELECT name FROM employees ORDER BY name")]
+
+# ─────────────────────────────────────────
+# TASK HELPERS
+# ─────────────────────────────────────────
+TASK_STATUSES      = ["Open", "In Progress", "Done"]
+TASK_STATUS_COLORS = {"Open": "#58a6ff", "In Progress": "#d29922", "Done": "#3fb950"}
+CAT_ICONS = {"Explorations": "🔭", "Residential": "🏡", "Commercial": "🏢",
+             "Licenses": "📄", "Bonds": "🔗", "Payroll": "💰", "Accounting": "💼"}
+
+def as_date(d):
+    """Accept a date, datetime, ISO string or None and return a date (or None)."""
+    if d is None or d == "":
+        return None
+    if isinstance(d, datetime):
+        return d.date()
+    if isinstance(d, date):
+        return d
+    try:
+        return date.fromisoformat(str(d)[:10])
+    except ValueError:
+        return None
+
+def due_info(due, status):
+    """Return (label, color, is_overdue) for a task's due date."""
+    d = as_date(due)
+    if d is None:
+        return "", "#6e7681", False
+    label = d.strftime("%b %d")
+    if status == "Done":
+        return f"Due {label}", "#6e7681", False
+    today = date.today()
+    if d < today:
+        return f"Overdue · {label}", "#f85149", True
+    if d == today:
+        return "Due today", "#d29922", False
+    return f"Due {label}", "#8b949e", False
+
+def task_row_html(name, status, due, proj_id=None, proj_name=None, proj_cat=None,
+                  created_by=None, show_project=True):
+    """One task as a single compact line (all user text escaped)."""
+    scol = TASK_STATUS_COLORS.get(status, "#8b949e")
+    dlabel, dcol, overdue = due_info(due, status)
+    border     = "#5c2b2b" if overdue else "#21262d"
+    name_style = "text-decoration:line-through;color:#6e7681;" if status == "Done" else "color:#e6edf3;"
+    h  = f'<div style="display:flex;align-items:center;gap:10px;background:#161b22;border:1px solid {border};border-radius:8px;padding:10px 14px;min-height:44px;">'
+    h += (f'<span style="font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;'
+          f'padding:2px 8px;border-radius:20px;border:1px solid {scol};color:{scol};white-space:nowrap;">{esc(status)}</span>')
+    h += f'<span style="font-size:13px;font-weight:600;flex:1;{name_style}">{esc(name)}</span>'
+    if show_project and proj_name and proj_id:
+        icon = CAT_ICONS.get(proj_cat, "📁")
+        h += (f'<a href="?open_proj={int(proj_id)}" target="_self" style="text-decoration:none;font-size:11px;'
+              f'color:#58a6ff;white-space:nowrap;">{icon} {esc(proj_name)}</a>')
+    if dlabel:
+        h += f'<span style="font-size:11px;font-weight:600;color:{dcol};white-space:nowrap;">{esc(dlabel)}</span>'
+    if created_by:
+        h += f'<span style="font-size:11px;color:#6e7681;white-space:nowrap;">{esc(created_by)}</span>'
+    h += '</div>'
+    return h
+
+def update_task_status(task_id, task_name, old_status, new_status):
+    c.execute("UPDATE tasks SET status=%s WHERE id=%s", (new_status, task_id))
+    if new_status == "Done" and old_status != "Done":
+        log_activity("Completed", "Task", task_name, USERNAME)
 
 # ─────────────────────────────────────────
 # SESSION STATE
@@ -465,6 +479,8 @@ if 'participants'      not in st.session_state: st.session_state.participants = 
 if 'selected_employee' not in st.session_state: st.session_state.selected_employee = None
 if 'confirm_delete'    not in st.session_state: st.session_state.confirm_delete = False
 if 'active_accounting' not in st.session_state: st.session_state.active_accounting = None
+if 'edit_task'         not in st.session_state: st.session_state.edit_task = None
+if 'confirm_del_task'  not in st.session_state: st.session_state.confirm_del_task = None
 
 # ── Handle click navigation via query params ──
 _qp = st.query_params
@@ -515,6 +531,12 @@ with st.sidebar:
     st.divider()
     st.markdown("<div class='nav-section'>Sections</div>", unsafe_allow_html=True)
 
+    if st.button("✅  Tasks", use_container_width=True, key="nav_Tasks"):
+        st.session_state.page = "Tasks"
+        st.session_state.active_project = None
+        st.session_state.edit_task = None
+        st.session_state.confirm_del_task = None
+
     if st.button("👥  Employees", use_container_width=True, key="nav_Employees"):
         st.session_state.page = "Employees"
         st.session_state.active_project = None
@@ -532,11 +554,11 @@ with st.sidebar:
             st.session_state.page = page_name
             st.session_state.active_project = None
 
+# ═══════ PART 2 STARTS HERE ═══════
+
 # ─────────────────────────────────────────
 # MAIN CONTENT
 # ─────────────────────────────────────────
-# Fresh connection every rerun — prevents stale cursor errors
-conn, c = get_conn()
 page = st.session_state.page
 
 # ══════════════════════════════════════════
@@ -551,15 +573,16 @@ if page == "Main Feed":
     week_days  = [week_start + timedelta(days=i) for i in range(7)]
     DAY_NAMES  = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
-    # Fetch all projects with start_date
-    all_projects = qall(c, 
-        "SELECT id, name, start_date FROM projects WHERE start_date IS NOT NULL AND start_date != ''"
+    # Fetch all projects with start_date (real date column now)
+    all_projects = qall(c,
+        "SELECT id, name, start_date, category FROM projects WHERE start_date IS NOT NULL"
     )
+    CAL_ICONS = {"Explorations": "🔭", "Residential": "🏡", "Commercial": "🏢",
+                 "Licenses": "📄", "Bonds": "🔗", "Payroll": "💰"}
 
     # Build calendar HTML — 7 columns
     cal_cols = st.columns(7)
     for col_idx, day in enumerate(week_days):
-        day_str    = day.strftime("%Y-%m-%d")
         is_today   = (day == today)
         day_label  = DAY_NAMES[col_idx]
         day_num    = day.strftime("%d")
@@ -568,25 +591,28 @@ if page == "Main Feed":
         header_color = "#fff"    if is_today else "#8b949e"
         border_color = "#FA8072" if is_today else "#21262d"
 
-        # Find projects starting on this day
-        day_projects = [(pid, pname) for pid, pname, pstart in all_projects if pstart == day_str]
+        # Match on real date objects (was string equality on text column)
+        day_projects = [(pid, pname, pcat) for pid, pname, pstart, pcat in all_projects
+                        if as_date(pstart) == day]
 
         proj_items = ""
-        for pid, pname in day_projects:
+        for pid, pname, pcat in day_projects:
             parts      = get_participants(pid)
             av_html    = "".join(avatar_html(p, "sm") for p in parts[:3])
-            short_name = pname[:14] + "…" if len(pname) > 14 else pname
+            short_name = pname[:13] + "…" if len(pname) > 13 else pname
+            cat_icon   = CAL_ICONS.get(pcat, "📁")
             proj_items += (
                 f'<a href="?open_proj={pid}" target="_self" style="text-decoration:none;">'
                 f'<div style="background:#0d1117;border:1px solid #30363d;border-radius:5px;'
                 f'padding:5px 6px;margin-top:4px;cursor:pointer;">'
-                f'<div style="font-size:10px;font-weight:600;color:#e6edf3;margin-bottom:3px;">{short_name}</div>'
+                f'<div style="font-size:10px;font-weight:600;color:#e6edf3;margin-bottom:3px;">'
+                f'{cat_icon} {esc(short_name)}</div>'
                 f'<div style="display:flex;gap:2px;">{av_html}</div>'
                 f'</div></a>'
             )
 
         if not proj_items:
-            proj_items = '<div style="font-size:10px;color:#30363d;margin-top:6px;text-align:center;">—</div>'
+            proj_items = '<div style="font-size:10px;color:#6e7681;margin-top:6px;text-align:center;">—</div>'
 
         cal_cols[col_idx].markdown(
             f'<div style="background:{header_bg};border:1px solid {border_color};border-radius:8px;'
@@ -600,52 +626,164 @@ if page == "Main Feed":
         )
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("<div style='font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#484f58;margin-bottom:10px;'>Recent Activity</div>", unsafe_allow_html=True)
 
-    # ── Activity Log — single line per entry ──
-    logs = qall(c, 
-        "SELECT action, item_type, item_name, done_by, done_at, extra FROM activity_log ORDER BY done_at DESC"
-    )
+    # ── Two columns: Activity Log | Live Field Status ──
+    feed_col, status_col = st.columns([3, 1], gap="large")
 
-    if not logs:
-        st.markdown("""
-        <div class="empty-state">
-            <div class="empty-icon">📭</div>
-            Nothing here yet.<br>Create a project or task to get started.
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        feed_html = '<div>'
-        for action, item_type, item_name, done_by, done_at, extra in logs:
-            badge_class  = "badge-project" if item_type == "Project" else "badge-task"
-            creator_av   = avatar_html(done_by, "sm")
+    with feed_col:
+        st.markdown("<div style='font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#6e7681;margin-bottom:10px;'>Recent Activity</div>", unsafe_allow_html=True)
 
-            # Build participant avatars separately (never inside an f-string)
-            part_av_html = ""
-            if extra:
-                names        = [n.strip() for n in extra.split(",") if n.strip()]
-                part_av_html = "".join(avatar_html(n, "sm") for n in names[:4])
+        logs = qall(c,
+            "SELECT action, item_type, item_name, done_by, done_at, extra FROM activity_log ORDER BY done_at DESC, id DESC"
+        )
+
+        if not logs:
+            st.markdown("""
+            <div class="empty-state">
+                <div class="empty-icon">📭</div>
+                Nothing here yet.<br>Create a project or task to get started.
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            CATEGORY_ICONS = {
+                "Explorations": "🔭", "Residential": "🏡", "Commercial": "🏢",
+                "Licenses": "📄", "Bonds": "🔗", "Accounting": "💼", "Payroll": "💰",
+            }
+            feed_html = '<div>'
+            for action, item_type, item_name, done_by, done_at, extra in logs:
+                creator_av   = avatar_html(done_by, "sm")
+                cat_icon     = ""
+                part_av_html = ""
+                if extra and item_type == "Project":
+                    if "|" in extra:
+                        cat_part, names_part = extra.split("|", 1)
+                        cat_icon = CATEGORY_ICONS.get(cat_part.strip(), "📁") + " "
+                        names = [n.strip() for n in names_part.split(",") if n.strip()]
+                    else:
+                        names = [n.strip() for n in extra.split(",") if n.strip()]
+                    part_av_html = "".join(avatar_html(n, "sm") for n in names[:5])
+
+                done_at_s   = fmt_ts(done_at)
+                badge_class = "badge-project" if item_type == "Project" else "badge-task"
+                card  = '<div style="background:#161b22;border:1px solid #21262d;border-radius:8px;padding:12px 16px;margin-bottom:6px;">'
+                card += (
+                    f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+                    f'<span style="font-size:16px;">{cat_icon}</span>'
+                    f'<span class="badge {badge_class}">{item_type}</span>'
+                    f'<span style="font-size:14px;font-weight:600;color:#e6edf3;flex:1;">{esc(item_name)}</span>'
+                    f'</div>'
+                )
+                card += '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
+                card += f'<span style="font-size:11px;color:#6e7681;">{esc(action)} by</span>'
+                card += creator_av
+                card += f'<span style="font-size:11px;color:#8b949e;font-weight:600;">{esc(done_by)}</span>'
+                card += f'<span style="font-size:11px;color:#6e7681;">· {done_at_s}</span>'
                 if part_av_html:
-                    part_av_html = (
-                        '<span style="display:inline-flex;gap:2px;margin-left:6px;'
-                        'vertical-align:middle;">' + part_av_html + '</span>'
+                    card += f'<span style="display:inline-flex;gap:3px;margin-left:8px;">{part_av_html}</span>'
+                card += '</div></div>'
+                feed_html += card
+            feed_html += '</div>'
+            st.markdown(feed_html, unsafe_allow_html=True)
+
+    # ── RIGHT: Live Field Status ──
+    with status_col:
+        st.markdown(
+            '<div style="font-size:11px;font-weight:600;text-transform:uppercase;'
+            'letter-spacing:0.08em;color:#6e7681;margin-bottom:10px;">🟢 Field Status</div>',
+            unsafe_allow_html=True
+        )
+
+        try:
+            all_emps    = qall(c, "SELECT name FROM employees ORDER BY name")
+            clocked_in  = []
+            clocked_out = []
+
+            latest_by_emp = {
+                r[0]: r for r in qall(c,
+                    "SELECT DISTINCT ON (employee) employee, event_type, project_id, created_at "
+                    "FROM clock_events ORDER BY employee, created_at DESC"
+                )
+            }
+            proj_lookup = {
+                r[0]: (r[1], r[2]) for r in qall(c, "SELECT id, name, category FROM projects")
+            }
+            for (emp_name,) in all_emps:
+                latest = latest_by_emp.get(emp_name)
+                if latest and latest[1] == "clock_in":
+                    proj = proj_lookup.get(latest[2]) if latest[2] else None
+                    clocked_in.append((emp_name, proj, latest[3]))
+                else:
+                    clocked_out.append(emp_name)
+
+            status_html = '<div style="background:#161b22;border:1px solid #21262d;border-radius:8px;padding:12px;min-height:200px;">'
+
+            if clocked_in:
+                for emp_name, proj, clock_time in clocked_in:
+                    av        = avatar_html(emp_name, "sm")
+                    proj_name = proj[0] if proj else "Unknown project"
+                    proj_cat  = proj[1] if proj else ""
+                    cat_icon  = {"Explorations":"🔭","Residential":"🏡","Commercial":"🏢"}.get(proj_cat, "📁")
+                    try:
+                        clocked_at = (clock_time if isinstance(clock_time, datetime)
+                                      else datetime.strptime(str(clock_time), "%Y-%m-%d %H:%M"))
+                        elapsed    = datetime.now() - clocked_at
+                        hrs, mins  = divmod(int(elapsed.total_seconds() // 60), 60)
+                        since      = f"{hrs}h {mins}m" if hrs else f"{mins}m"
+                    except Exception:
+                        since = str(clock_time)
+                    status_html += (
+                        '<div style="display:flex;align-items:center;gap:8px;'
+                        'padding:7px 0;border-bottom:1px solid #21262d;">'
+                        f'{av}'
+                        '<div style="flex:1;min-width:0;">'
+                        f'<div style="font-size:12px;font-weight:600;color:#e6edf3;'
+                        f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{esc(emp_name)}</div>'
+                        f'<div style="font-size:10px;color:#3fb950;">{cat_icon} {esc(proj_name)}</div>'
+                        f'<div style="font-size:10px;color:#6e7681;">{since} ago</div>'
+                        '</div>'
+                        '<div style="width:8px;height:8px;border-radius:50%;background:#3fb950;'
+                        'box-shadow:0 0 6px #3fb95088;flex-shrink:0;"></div>'
+                        '</div>'
+                    )
+            else:
+                status_html += (
+                    '<div style="font-size:12px;color:#6e7681;text-align:center;padding:20px 0;">'
+                    '👷 No one clocked in yet</div>'
+                )
+
+            if clocked_out:
+                status_html += (
+                    '<div style="font-size:10px;font-weight:600;text-transform:uppercase;'
+                    'letter-spacing:0.08em;color:#6e7681;margin-top:14px;margin-bottom:6px;">Off</div>'
+                )
+                for emp_name in clocked_out:
+                    av = avatar_html(emp_name, "sm")
+                    status_html += (
+                        '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;opacity:0.4;">'
+                        f'{av}'
+                        f'<span style="font-size:11px;color:#6e7681;">{esc(emp_name)}</span>'
+                        '</div>'
                     )
 
-            feed_html += (
-                '<div style="display:flex;align-items:center;gap:8px;'
-                'padding:8px 12px;border-bottom:1px solid #161b22;">'
-                f'<span class="badge {badge_class}">{item_type}</span>'
-                f'<span style="font-size:13px;font-weight:600;color:#e6edf3;flex:1;">{item_name}</span>'
-                f'{part_av_html}'
-                f'<span style="display:inline-flex;align-items:center;gap:4px;">'
-                f'{creator_av}'
-                f'<span style="font-size:11px;color:#484f58;">{done_by}</span>'
-                f'</span>'
-                f'<span style="font-size:11px;color:#30363d;white-space:nowrap;">{done_at}</span>'
-                '</div>'
-            )
-        feed_html += '</div>'
-        st.markdown(feed_html, unsafe_allow_html=True)
+            status_html += '</div>'
+            st.markdown(status_html, unsafe_allow_html=True)
+
+        except Exception as e:
+            if "clock_events" in str(e):
+                st.markdown(
+                    '<div style="background:#161b22;border:1px solid #21262d;border-radius:8px;'
+                    'padding:20px;text-align:center;color:#6e7681;font-size:12px;">'
+                    '📱 ClockBox not connected yet.<br>'
+                    '<span style="font-size:10px;">Run setup.sql in Supabase to enable.</span>'
+                    '</div>',
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown(
+                    f'<div style="background:#161b22;border:1px solid #21262d;border-radius:8px;'
+                    f'padding:12px;color:#f85149;font-size:11px;">Field status error: {esc(str(e))}</div>',
+                    unsafe_allow_html=True
+                )
 
 # ══════════════════════════════════════════
 # NEW TASK
@@ -654,29 +792,159 @@ elif page == "New Task":
     st.markdown("<div class='page-title'>＋ New Task</div>", unsafe_allow_html=True)
     st.markdown("<div class='page-subtitle'>Add a new task to track.</div>", unsafe_allow_html=True)
 
-    projects = qall(c, "SELECT id, name FROM projects ORDER BY name")
-    project_map = {name: pid for pid, name in projects}
+    projects      = qall(c, "SELECT id, name FROM projects ORDER BY name")
+    proj_names    = {pid: pname for pid, pname in projects}
+    proj_options  = [None] + [pid for pid, _ in projects]
 
     with st.form("form_new_task", clear_on_submit=True):
         task_name   = st.text_input("Task Name")
-        proj_choice = st.selectbox("Link to Project (optional)", ["— None —"] + list(project_map.keys()))
-        status      = st.selectbox("Status", ["Open", "In Progress", "Done"])
+        proj_choice = st.selectbox("Link to Project (optional)", proj_options,
+                                   format_func=lambda v: "— None —" if v is None else proj_names.get(v, "?"))
+        status      = st.selectbox("Status", TASK_STATUSES)
+        due_date    = st.date_input("Due date (optional)", value=None)
         submitted   = st.form_submit_button("Create Task")
 
     if submitted:
         if task_name.strip():
-            proj_id = project_map.get(proj_choice) if proj_choice != "— None —" else None
-            qall(c,
-                'INSERT INTO tasks (task_name, project_id, status, created_by, created_at) VALUES (%s,%s,%s,%s,%s)',
-                (task_name.strip(), proj_id, status, USERNAME, get_now())
+            c.execute(
+                'INSERT INTO tasks (task_name, project_id, status, created_by, created_at, due_date) VALUES (%s,%s,%s,%s,%s,%s)',
+                (task_name.strip(), proj_choice, status, USERNAME, get_now(), due_date)
             )
-            conn.commit()
             log_activity("Created", "Task", task_name.strip(), USERNAME)
-            st.success(f"Task **{task_name.strip()}** created!")
-            st.session_state.page = "Main Feed"
+            st.session_state.page = "Tasks"
             st.rerun()
         else:
             st.warning("Please enter a task name.")
+
+# ══════════════════════════════════════════
+# TASKS
+# ══════════════════════════════════════════
+elif page == "Tasks":
+    st.markdown("<div class='page-title'>✅ Tasks</div>", unsafe_allow_html=True)
+
+    # ── Summary chips ──
+    status_counts = dict(qall(c, "SELECT status, COUNT(*) FROM tasks GROUP BY status"))
+    overdue_n     = qone(c, "SELECT COUNT(*) FROM tasks WHERE status <> 'Done' AND due_date < %s", (date.today(),))[0]
+    chips = ""
+    for label, n, col in [("Open", status_counts.get("Open", 0), "#58a6ff"),
+                          ("In progress", status_counts.get("In Progress", 0), "#d29922"),
+                          ("Done", status_counts.get("Done", 0), "#3fb950"),
+                          ("Overdue", overdue_n, "#f85149")]:
+        chips += (f'<span style="display:inline-block;margin-right:8px;padding:3px 12px;border-radius:20px;'
+                  f'border:1px solid {col};color:{col};font-size:11px;font-weight:700;">{n} {label}</span>')
+    st.markdown(f"<div class='page-subtitle' style='margin-bottom:16px;'>{chips}</div>", unsafe_allow_html=True)
+
+    projects_all = qall(c, "SELECT id, name FROM projects ORDER BY name")
+    proj_names   = {pid: pname for pid, pname in projects_all}
+
+    # ── Edit panel (opens when ✏️ is clicked) ──
+    edit_id = st.session_state.get("edit_task")
+    if edit_id:
+        erow = qone(c, "SELECT task_name, project_id, status, due_date FROM tasks WHERE id=%s", (edit_id,))
+        if erow:
+            e_options = [None] + [pid for pid, _ in projects_all]
+            with st.form("form_edit_task"):
+                st.markdown("**Edit task**")
+                e_name   = st.text_input("Task name", value=erow[0])
+                e_proj   = st.selectbox("Project", e_options,
+                                        index=e_options.index(erow[1]) if erow[1] in e_options else 0,
+                                        format_func=lambda v: "— None —" if v is None else proj_names.get(v, "?"))
+                e_status = st.selectbox("Status", TASK_STATUSES,
+                                        index=TASK_STATUSES.index(erow[2]) if erow[2] in TASK_STATUSES else 0)
+                e_due    = st.date_input("Due date (optional)", value=as_date(erow[3]))
+                b1, b2   = st.columns(2)
+                save_edit   = b1.form_submit_button("Save changes")
+                cancel_edit = b2.form_submit_button("Cancel")
+            if cancel_edit:
+                st.session_state.edit_task = None
+                st.rerun()
+            if save_edit:
+                if e_name.strip():
+                    c.execute("UPDATE tasks SET task_name=%s, project_id=%s, status=%s, due_date=%s WHERE id=%s",
+                              (e_name.strip(), e_proj, e_status, e_due, edit_id))
+                    if e_status == "Done" and erow[2] != "Done":
+                        log_activity("Completed", "Task", e_name.strip(), USERNAME)
+                    st.session_state.edit_task = None
+                    st.rerun()
+                else:
+                    st.warning("Please enter a task name.")
+        else:
+            st.session_state.edit_task = None
+
+    # ── Delete confirmation (opens when 🗑️ is clicked) ──
+    del_id = st.session_state.get("confirm_del_task")
+    if del_id:
+        drow = qone(c, "SELECT task_name FROM tasks WHERE id=%s", (del_id,))
+        if drow:
+            st.warning(f"Delete the task \"{esc(drow[0])}\" permanently?")
+            d1, d2 = st.columns(2)
+            if d1.button("Yes, delete it", key="task_del_yes"):
+                c.execute("DELETE FROM tasks WHERE id=%s", (del_id,))
+                st.session_state.confirm_del_task = None
+                st.rerun()
+            if d2.button("Cancel", key="task_del_no"):
+                st.session_state.confirm_del_task = None
+                st.rerun()
+        else:
+            st.session_state.confirm_del_task = None
+
+    # ── Filters ──
+    f1, f2, f3 = st.columns([2, 3, 3])
+    status_filter = f1.selectbox("Status", ["Active", "Open", "In Progress", "Done", "All"], key="task_f_status")
+    proj_filter   = f2.selectbox("Project", ["All projects", "No project"] + [pid for pid, _ in projects_all],
+                                 format_func=lambda v: v if isinstance(v, str) else proj_names.get(v, "?"),
+                                 key="task_f_proj")
+    search_text   = f3.text_input("Search", placeholder="Search tasks…", key="task_f_search")
+
+    where, params = [], []
+    if status_filter == "Active":
+        where.append("t.status <> 'Done'")
+    elif status_filter != "All":
+        where.append("t.status = %s"); params.append(status_filter)
+    if proj_filter == "No project":
+        where.append("t.project_id IS NULL")
+    elif proj_filter != "All projects":
+        where.append("t.project_id = %s"); params.append(proj_filter)
+    if search_text.strip():
+        pat = search_text.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        where.append("t.task_name ILIKE %s"); params.append("%" + pat + "%")
+
+    sql = ("SELECT t.id, t.task_name, t.status, t.due_date, t.created_by, t.project_id, p.name, p.category "
+           "FROM tasks t LEFT JOIN projects p ON p.id = t.project_id")
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    sql += " ORDER BY (t.status = 'Done'), t.due_date NULLS LAST, t.id DESC"
+    tasks = qall(c, sql, tuple(params))
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    if not tasks:
+        st.markdown("""
+        <div class="empty-state" style="padding:50px 20px;">
+            <div class="empty-icon">✅</div>
+            No tasks match.<br>Use <strong style="color:#3fb950">＋ New Task</strong> to add one.
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        MAX_SHOWN = 60
+        for tid, tname, tstatus, tdue, tby, tpid, tpname, tpcat in tasks[:MAX_SHOWN]:
+            col_card, col_stat, col_edit, col_del = st.columns([7, 2, 1, 1])
+            col_card.markdown(task_row_html(tname, tstatus, tdue, tpid, tpname, tpcat, tby), unsafe_allow_html=True)
+            cur_idx    = TASK_STATUSES.index(tstatus) if tstatus in TASK_STATUSES else 0
+            new_status = col_stat.selectbox("Status", TASK_STATUSES, index=cur_idx,
+                                            key=f"tstat_{tid}", label_visibility="collapsed")
+            if new_status != TASK_STATUSES[cur_idx]:
+                update_task_status(tid, tname, tstatus, new_status)
+                st.rerun()
+            if col_edit.button("✏️", key=f"tedit_{tid}", help="Edit task"):
+                st.session_state.edit_task = tid
+                st.session_state.confirm_del_task = None
+                st.rerun()
+            if col_del.button("🗑️", key=f"tdel_{tid}", help="Delete task"):
+                st.session_state.confirm_del_task = tid
+                st.session_state.edit_task = None
+                st.rerun()
+        if len(tasks) > MAX_SHOWN:
+            st.caption(f"Showing the first {MAX_SHOWN} of {len(tasks)} tasks — use the filters to narrow the list.")
 
 # ══════════════════════════════════════════
 # NEW PROJECT
@@ -685,78 +953,66 @@ elif page == "New Project":
     st.markdown("<div class='page-title'>＋ New Project</div>", unsafe_allow_html=True)
     st.markdown("<div class='page-subtitle'>Fill in the details to start a new project.</div>", unsafe_allow_html=True)
 
-    # ── Participant search (outside form so it's interactive) ──
-    st.markdown("**Participants**")
-    emp_search = st.text_input(
-        "Search employee name", value=st.session_state.emp_search,
-        placeholder="Start typing a name…", key="emp_search_input"
-    )
+    emp_list = all_employees()
 
-    if emp_search:
-        matches = [e for e in all_employees() if emp_search.lower() in e.lower()
-                   and e not in st.session_state.participants]
-        if matches:
-            cols = st.columns(min(len(matches), 4))
-            for i, emp in enumerate(matches[:4]):
-                if cols[i].button(f"＋ {emp}", key=f"add_{emp}"):
-                    st.session_state.participants.append(emp)
-                    st.session_state.emp_search = ""
-                    st.rerun()
-        else:
-            st.caption("No matches found.")
-
-    # Show selected participants with remove option
-    if st.session_state.participants:
-        st.markdown("**Added:**")
-        cols = st.columns(min(len(st.session_state.participants), 5))
-        for i, p in enumerate(st.session_state.participants):
-            with cols[i % 5]:
-                st.markdown(
-                    f"{avatar_html(p,'sm')} <span style='font-size:12px;color:#8b949e'>{p}</span>",
-                    unsafe_allow_html=True
-                )
-                if st.button("✕", key=f"rm_{p}"):
-                    st.session_state.participants.remove(p)
-                    st.rerun()
-
-    st.markdown("---")
-
-    # ── Main form ──
     with st.form("form_new_proj", clear_on_submit=True):
         proj_name    = st.text_input("Project Name")
         proj_cat     = st.selectbox("Category", [
             "Commercial", "Residential", "Explorations",
             "Licenses", "Bonds", "Accounting", "Payroll"
         ])
-        est_duration = st.text_input("Estimated Duration (e.g. 3 months)")
-        start_date   = st.date_input("Starting Date")
-        submitted    = st.form_submit_button("Create Project")
+        est_duration  = st.text_input("Estimated Duration (e.g. 3 months)")
+        start_date    = st.date_input("Starting Date")
+        proj_customer = st.text_input("Customer / Client (optional)")
+        proj_address  = st.text_input("Address (optional)")
+
+        st.markdown("<div style='font-size:13px;font-weight:500;color:#8b949e;margin-top:8px;margin-bottom:6px;'>Participants</div>", unsafe_allow_html=True)
+        selected_emps = []
+        cols_per_row = 4
+        emp_rows = [emp_list[i:i+cols_per_row] for i in range(0, len(emp_list), cols_per_row)]
+        for row in emp_rows:
+            row_cols = st.columns(cols_per_row)
+            for idx, emp in enumerate(row):
+                checked = row_cols[idx].checkbox(emp, key=f"chk_{emp}", value=(emp == USERNAME))
+                if checked:
+                    selected_emps.append(emp)
+
+        submitted = st.form_submit_button("Create Project")
 
     if submitted:
         if proj_name.strip():
-            c.execute(
-                '''INSERT INTO projects (name, category, est_duration, start_date, created_by, created_at)
-                   VALUES (%s,%s,%s,%s,%s,%s) RETURNING id''',
-                (proj_name.strip(), proj_cat, est_duration.strip(),
-                 str(start_date), USERNAME, get_now())
-            )
-            proj_id = c.fetchone()[0]
-            conn.commit()
-
-            # Add creator as participant if not already
-            all_parts = list(st.session_state.participants)
+            addr_val = proj_address.strip() if proj_cat in ("Commercial","Residential","Explorations") else ""
+            cust_val = proj_customer.strip() if proj_cat in ("Commercial","Residential","Explorations") else ""
+            all_parts = list(selected_emps)
             if USERNAME not in all_parts:
                 all_parts.append(USERNAME)
 
-            for emp in all_parts:
+            # Explicit transaction: project + participants must land together,
+            # even though the connection is in autocommit mode by default.
+            conn.autocommit = False
+            try:
                 c.execute(
-                    "INSERT INTO project_participants (project_id, employee) VALUES (%s,%s)",
-                    (proj_id, emp)
+                    '''INSERT INTO projects (name, category, est_duration, start_date, created_by, created_at, address, customer)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id''',
+                    (proj_name.strip(), proj_cat, est_duration.strip(),
+                     start_date, USERNAME, get_now(), addr_val, cust_val)
                 )
-            conn.commit()
+                proj_id = c.fetchone()[0]
+                for emp in all_parts:
+                    c.execute(
+                        "INSERT INTO project_participants (project_id, employee) VALUES (%s,%s)",
+                        (proj_id, emp)
+                    )
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                st.error("Could not create the project. Please try again.")
+                st.stop()
+            finally:
+                conn.autocommit = True
 
             log_activity("Created", "Project", proj_name.strip(), USERNAME,
-                         extra=",".join(all_parts))
+                         extra=proj_cat + "|" + ",".join(all_parts))
 
             st.session_state.participants = []
             st.session_state.page = "Main Feed"
@@ -764,20 +1020,22 @@ elif page == "New Project":
         else:
             st.warning("Please enter a project name.")
 
+# ═══════ PART 3 STARTS HERE ═══════
+
 # ══════════════════════════════════════════
 # PROJECT DETAIL PAGE
 # ══════════════════════════════════════════
 elif page == "Project Detail" and st.session_state.active_project:
     proj_id = st.session_state.active_project
-    proj = c.execute(
-        "SELECT name, category, est_duration, start_date, created_by, created_at FROM projects WHERE id=%s",
+    proj = qone(c,
+        "SELECT name, category, est_duration, start_date, created_by, created_at, address, customer FROM projects WHERE id=%s",
         (proj_id,)
     )
 
     if not proj:
         st.error("Project not found.")
     else:
-        name, category, est_duration, start_date, created_by, created_at = proj
+        name, category, est_duration, start_date, created_by, created_at, address, customer = proj
         participants = get_participants(proj_id)
 
         # Back button
@@ -786,38 +1044,52 @@ elif page == "Project Detail" and st.session_state.active_project:
             st.session_state.active_project = None
             st.rerun()
 
-        st.markdown(f"<div class='page-title'>📁 {name}</div>", unsafe_allow_html=True)
-        st.markdown(f"<div class='page-subtitle'>{category}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='page-title'>📁 {esc(name)}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='page-subtitle'>{esc(category)}</div>", unsafe_allow_html=True)
 
         left_col, right_col = st.columns([1, 1], gap="large")
 
-        # ── LEFT: Details + Phases ──
+        # ── LEFT: Details + Phases + Tasks + Complete/Delete ──
         with left_col:
             part_html       = "".join(avatar_html(p, "sm") for p in participants)
             part_names_html = "".join(
-                f'<span style="font-size:11px;color:#8b949e;align-self:center;">{p}</span>'
+                f'<span style="font-size:11px;color:#8b949e;align-self:center;">{esc(p)}</span>'
                 for p in participants
             )
-            st.markdown(f"""
-            <div class="detail-box">
-                <div class="detail-label">Category</div><div class="detail-value">{category}</div>
-                <div class="detail-label">Estimated Duration</div><div class="detail-value">{est_duration or "—"}</div>
-                <div class="detail-label">Starting Date</div><div class="detail-value">{start_date or "—"}</div>
-                <div class="detail-label">Created By</div><div class="detail-value">{created_by}</div>
-                <div class="detail-label">Created At</div><div class="detail-value">{created_at}</div>
-                <div class="detail-label">Participants</div>
-                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
-                    {part_html}{part_names_html}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            # Pure string concatenation — never nested f-strings
+            box = '<div class="detail-box">'
+            box += f'<div class="detail-label">Category</div><div class="detail-value">{esc(category)}</div>'
+            if customer:
+                box += f'<div class="detail-label">Customer</div><div class="detail-value">{esc(customer)}</div>'
+            if address:
+                box += f'<div class="detail-label">Address</div><div class="detail-value">{esc(address)}</div>'
+            box += f'<div class="detail-label">Estimated Duration</div><div class="detail-value">{esc(est_duration) or "—"}</div>'
+            box += f'<div class="detail-label">Starting Date</div><div class="detail-value">{as_date(start_date) or "—"}</div>'
+            box += f'<div class="detail-label">Created By</div><div class="detail-value">{esc(created_by)}</div>'
+            box += f'<div class="detail-label">Created At</div><div class="detail-value">{fmt_ts(created_at)}</div>'
+            box += '<div class="detail-label">Participants</div>'
+            box += '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">'
+            box += part_html + part_names_html
+            box += '</div></div>'
+            st.markdown(box, unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
 
-            # ── Phases ──
+            # ── Phases (single query with LATERAL join — was N+1 before) ──
             st.markdown("**Project Phases**")
-            phases = qone(c,
-                "SELECT id, phase_name, equipment, comments, added_by, added_at FROM phases WHERE project_id=%s ORDER BY added_at",
+            phases = qall(c,
+                """SELECT p.id, p.phase_name, p.equipment, p.comments, p.added_by, p.added_at,
+                          pp.status AS latest_status, pp.updated_by, pp.updated_at
+                   FROM phases p
+                   LEFT JOIN LATERAL (
+                       SELECT status, updated_by, updated_at
+                       FROM phase_progress
+                       WHERE phase_id = p.id
+                       ORDER BY updated_at DESC, id DESC
+                       LIMIT 1
+                   ) pp ON TRUE
+                   WHERE p.project_id = %s
+                   ORDER BY p.added_at, p.id""",
                 (proj_id,)
             )
 
@@ -831,18 +1103,13 @@ elif page == "Project Detail" and st.session_state.active_project:
             }
 
             if phases:
-                for ph_id, ph_name, ph_equip, ph_comment, ph_by, ph_at in phases:
-                    latest_prog    = qall(c,
-                        "SELECT status, updated_by, updated_at FROM phase_progress WHERE phase_id=%s ORDER BY updated_at DESC LIMIT 1",
-                        (ph_id,)
-                    )
-                    current_status = latest_prog[0] if latest_prog else None
+                for (ph_id, ph_name, ph_equip, ph_comment, ph_by, ph_at,
+                     latest_status, latest_by, latest_at) in phases:
 
-                    # Build each field only if it has content — no HTML leaking into text
-                    equip_str   = ph_equip.strip()   if ph_equip   else ""
-                    comment_str = ph_comment.strip() if ph_comment else ""
+                    current_status = latest_status
+                    equip_str      = ph_equip.strip()   if ph_equip   else ""
+                    comment_str    = ph_comment.strip() if ph_comment else ""
 
-                    # Build progress pills (pure HTML, no f-string conditionals inside tags)
                     pills_html = ""
                     for step in PROGRESS_STEPS:
                         is_active  = (step == current_status)
@@ -855,49 +1122,47 @@ elif page == "Project Detail" and st.session_state.active_project:
                             )
                         else:
                             pills_html += (
-                                f'<span style="background:#21262d;color:#484f58;font-size:10px;'
+                                f'<span style="background:#21262d;color:#6e7681;font-size:10px;'
                                 f'font-weight:600;padding:4px 10px;border-radius:4px;'
                                 f'border:1px solid #30363d;">{step}</span> '
                             )
 
-                    # Last update line
-                    if latest_prog:
-                        prog_color       = PROGRESS_COLORS[latest_prog[0]]
+                    if latest_status:
+                        prog_color       = PROGRESS_COLORS[latest_status]
                         last_update_html = (
-                            f'<div style="font-size:11px;color:#484f58;margin-top:6px;">'
+                            f'<div style="font-size:11px;color:#6e7681;margin-top:6px;">'
                             f'Last updated to <span style="color:{prog_color};font-weight:600;">'
-                            f'{latest_prog[0]}</span> by '
-                            f'<span style="color:#8b949e;font-weight:600;">{latest_prog[1]}</span>'
-                            f' &middot; {latest_prog[2]}</div>'
+                            f'{esc(latest_status)}</span> by '
+                            f'<span style="color:#8b949e;font-weight:600;">{esc(latest_by)}</span>'
+                            f' &middot; {fmt_ts(latest_at)}</div>'
                         )
                     else:
-                        last_update_html = '<div style="font-size:11px;color:#484f58;margin-top:6px;">Not started yet.</div>'
+                        last_update_html = '<div style="font-size:11px;color:#6e7681;margin-top:6px;">Not started yet.</div>'
 
-                    # Full card — one single self-contained HTML block
                     card_html = (
                         '<div class="phase-card">'
                           '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">'
-                            f'<div style="font-size:13px;font-weight:700;color:#e6edf3;">📌 {ph_name}</div>'
-                            f'<div style="font-size:10px;color:#484f58;text-align:right;">'
-                              f'Created by <span style="color:#8b949e;font-weight:600;">{ph_by}</span>'
-                              f'<br>{ph_at}'
+                            f'<div style="font-size:13px;font-weight:700;color:#e6edf3;">📌 {esc(ph_name)}</div>'
+                            f'<div style="font-size:10px;color:#6e7681;text-align:right;">'
+                              f'Created by <span style="color:#8b949e;font-weight:600;">{esc(ph_by)}</span>'
+                              f'<br>{fmt_ts(ph_at)}'
                             f'</div>'
                           '</div>'
                     )
                     if equip_str:
                         card_html += (
                             f'<div style="font-size:12px;color:#8b949e;margin-bottom:4px;">'
-                            f'🔧 <strong>Equipment:</strong> {equip_str}</div>'
+                            f'🔧 <strong>Equipment:</strong> {esc(equip_str)}</div>'
                         )
                     if comment_str:
                         card_html += (
                             f'<div style="font-size:12px;color:#8b949e;margin-bottom:4px;">'
-                            f'💬 <strong>Comments:</strong> {comment_str}</div>'
+                            f'💬 <strong>Comments:</strong> {esc(comment_str)}</div>'
                         )
                     card_html += (
                         '<div style="margin-top:12px;">'
                           '<div style="font-size:10px;font-weight:600;text-transform:uppercase;'
-                               'letter-spacing:0.08em;color:#484f58;margin-bottom:6px;">Progress</div>'
+                               'letter-spacing:0.08em;color:#6e7681;margin-bottom:6px;">Progress</div>'
                           f'<div style="display:flex;gap:5px;flex-wrap:wrap;">{pills_html}</div>'
                           f'{last_update_html}'
                         '</div>'
@@ -905,30 +1170,25 @@ elif page == "Project Detail" and st.session_state.active_project:
                     )
                     st.markdown(card_html, unsafe_allow_html=True)
 
-                    # Progress click buttons + Delete Phase — participants only
                     if USERNAME in participants:
-                        # 5 progress steps + 1 delete column
                         prog_cols = st.columns(len(PROGRESS_STEPS) + 1)
                         for i, step in enumerate(PROGRESS_STEPS):
                             if prog_cols[i].button(step, key=f"prog_{ph_id}_{step}"):
-                                qone(c,
+                                c.execute(
                                     "INSERT INTO phase_progress (phase_id, status, updated_by, updated_at) VALUES (%s,%s,%s,%s)",
                                     (ph_id, step, USERNAME, get_now())
                                 )
-                                conn.commit()
                                 st.rerun()
-                        # Delete phase button in last column
+                        # Cascade deletes the phase's progress rows automatically.
                         if prog_cols[-1].button("🗑️", key=f"del_phase_{ph_id}", help="Delete this phase"):
                             c.execute("DELETE FROM phases WHERE id=%s", (ph_id,))
-                            c.execute("DELETE FROM phase_progress WHERE phase_id=%s", (ph_id,))
-                            conn.commit()
                             st.rerun()
                         st.markdown("<div style='margin-bottom:8px;'></div>", unsafe_allow_html=True)
             else:
-                st.markdown("<div style='color:#484f58;font-size:13px;'>No phases yet.</div>", unsafe_allow_html=True)
+                st.markdown("<div style='color:#6e7681;font-size:13px;'>No phases yet.</div>", unsafe_allow_html=True)
 
             if USERNAME in participants:
-                st.markdown("<br>**Add a Phase**")
+                st.markdown("<br>**Add a Phase**", unsafe_allow_html=True)
                 with st.form("form_phase", clear_on_submit=True):
                     ph_name    = st.text_input("Phase Name")
                     ph_equip   = st.text_input("Equipment (optional)")
@@ -940,43 +1200,84 @@ elif page == "Project Detail" and st.session_state.active_project:
                         "INSERT INTO phases (project_id, phase_name, equipment, comments, added_by, added_at) VALUES (%s,%s,%s,%s,%s,%s)",
                         (proj_id, ph_name.strip(), ph_equip.strip(), ph_comment.strip(), USERNAME, get_now())
                     )
-                    conn.commit()
                     st.rerun()
             else:
                 st.caption("Only project participants can add phases.")
+
+            # ── Tasks for this project ──
+            st.markdown("<br>**Tasks**", unsafe_allow_html=True)
+            ptasks = qall(c,
+                "SELECT id, task_name, status, due_date, created_by FROM tasks WHERE project_id=%s "
+                "ORDER BY (status = 'Done'), due_date NULLS LAST, id DESC",
+                (proj_id,)
+            )
+            if ptasks:
+                for tid, tname, tstatus, tdue, tby in ptasks:
+                    tc1, tc2 = st.columns([3, 1])
+                    tc1.markdown(task_row_html(tname, tstatus, tdue, created_by=tby, show_project=False),
+                                 unsafe_allow_html=True)
+                    if USERNAME in participants:
+                        cur_idx    = TASK_STATUSES.index(tstatus) if tstatus in TASK_STATUSES else 0
+                        new_status = tc2.selectbox("Status", TASK_STATUSES, index=cur_idx,
+                                                   key=f"ptstat_{tid}", label_visibility="collapsed")
+                        if new_status != TASK_STATUSES[cur_idx]:
+                            update_task_status(tid, tname, tstatus, new_status)
+                            st.rerun()
+            else:
+                st.markdown("<div style='color:#6e7681;font-size:13px;'>No tasks yet.</div>", unsafe_allow_html=True)
+
+            if USERNAME in participants:
+                with st.form("form_proj_task", clear_on_submit=True):
+                    pt_name   = st.text_input("New task")
+                    pt_due    = st.date_input("Due date (optional)", value=None)
+                    pt_submit = st.form_submit_button("Add Task")
+                if pt_submit and pt_name.strip():
+                    c.execute(
+                        "INSERT INTO tasks (task_name, project_id, status, created_by, created_at, due_date) VALUES (%s,%s,%s,%s,%s,%s)",
+                        (pt_name.strip(), proj_id, "Open", USERNAME, get_now(), pt_due)
+                    )
+                    log_activity("Created", "Task", pt_name.strip(), USERNAME)
+                    st.rerun()
 
             # ── Complete / Delete Project ──
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("<hr style='border-color:#21262d;'>", unsafe_allow_html=True)
 
-            # Check if already completed
-            proj_status = qone(c, "SELECT completed, completed_by, completed_at FROM projects WHERE id=%s", (proj_id,))
-            is_completed = proj_status and proj_status[0] == 1
+            proj_status  = qone(c, "SELECT completed, completed_by, completed_at FROM projects WHERE id=%s", (proj_id,))
+            is_completed = proj_status and proj_status[0] is True
 
             if is_completed:
                 st.markdown(
                     f'<div style="background:#0d1a10;border:1px solid #1f4a24;border-radius:6px;'
                     f'padding:10px 14px;font-size:12px;color:#3fb950;margin-bottom:8px;">'
-                    f'✅ Completed by <strong>{proj_status[1]}</strong> · {proj_status[2]}</div>',
+                    f'✅ Completed by <strong>{esc(proj_status[1])}</strong> · {fmt_ts(proj_status[2])}</div>',
                     unsafe_allow_html=True
                 )
             elif USERNAME in participants:
                 if st.button("✅  Mark as Complete", key="complete_project", use_container_width=True):
                     now = get_now()
-                    c.execute(
-                        "UPDATE projects SET completed=1, completed_by=%s, completed_at=%s WHERE id=%s",
-                        (USERNAME, now, proj_id)
-                    )
-                    # Log to activity feed
-                    log_activity("Completed", "Project", name, USERNAME)
-                    # If qualifying category, create accounting entry
-                    if category in ("Explorations", "Residential", "Commercial"):
-                        proj_creator = qone(c, "SELECT created_by FROM projects WHERE id=%s", (proj_id,))[0]
+                    # Explicit transaction: project update + activity log +
+                    # accounting mirror must land together.
+                    conn.autocommit = False
+                    try:
                         c.execute(
-                            "INSERT OR IGNORE INTO accounting (project_id, project_name, category, created_by, completed_by, completed_at) VALUES (%s,%s,%s,%s,%s,%s)",
-                            (proj_id, name, category, proj_creator, USERNAME, now)
+                            "UPDATE projects SET completed=TRUE, completed_by=%s, completed_at=%s WHERE id=%s",
+                            (USERNAME, now, proj_id)
                         )
-                    conn.commit()
+                        log_activity("Completed", "Project", name, USERNAME)
+                        if category in ("Explorations", "Residential", "Commercial"):
+                            proj_creator = qone(c, "SELECT created_by FROM projects WHERE id=%s", (proj_id,))[0]
+                            c.execute(
+                                "INSERT INTO accounting (project_id, project_name, category, created_by, completed_by, completed_at) VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT (project_id) DO NOTHING",
+                                (proj_id, name, category, proj_creator, USERNAME, now)
+                            )
+                        conn.commit()
+                    except Exception:
+                        conn.rollback()
+                        st.error("Could not complete the project. Please try again.")
+                        st.stop()
+                    finally:
+                        conn.autocommit = True
                     st.rerun()
 
             if USERNAME in participants:
@@ -984,21 +1285,16 @@ elif page == "Project Detail" and st.session_state.active_project:
                     st.session_state.confirm_delete = True
 
                 if st.session_state.get("confirm_delete"):
-                    st.warning("⚠️ Are you sure? This will permanently delete the project and all its phases.")
+                    st.warning("⚠️ Are you sure? This will permanently delete the project and everything under it.")
                     c1, c2 = st.columns(2)
                     if c1.button("Yes, delete it", key="confirm_del_yes"):
+                        # ON DELETE CASCADE handles phases, phase_progress,
+                        # participants, chat, accounting, clock_events, field_reports.
+                        # tasks are unlinked (ON DELETE SET NULL), not deleted.
                         c.execute("DELETE FROM projects WHERE id=%s", (proj_id,))
-                        c.execute("DELETE FROM project_participants WHERE project_id=%s", (proj_id,))
-                        # Delete all phases and their progress
-                        phase_ids = [r[0] for r in qall(c, "SELECT id FROM phases WHERE project_id=%s", (proj_id,))]
-                        for pid2 in phase_ids:
-                            c.execute("DELETE FROM phase_progress WHERE phase_id=%s", (pid2,))
-                        c.execute("DELETE FROM phases WHERE project_id=%s", (proj_id,))
-                        c.execute("DELETE FROM chat_messages WHERE project_id=%s", (proj_id,))
-                        conn.commit()
-                        st.session_state.confirm_delete = False
-                        st.session_state.active_project = None
-                        st.session_state.page = category
+                        st.session_state.confirm_delete    = False
+                        st.session_state.active_project    = None
+                        st.session_state.page              = category
                         st.rerun()
                     if c2.button("Cancel", key="confirm_del_no"):
                         st.session_state.confirm_delete = False
@@ -1007,9 +1303,18 @@ elif page == "Project Detail" and st.session_state.active_project:
         # ── RIGHT: Timeline + Chat ──
         with right_col:
 
-            # ── Phase Timeline ──
-            timeline_phases = c.execute(
-                "SELECT id, phase_name FROM phases WHERE project_id=%s ORDER BY added_at",
+            # ── Phase Timeline (single query — was N+1 before) ──
+            timeline_phases = qall(c,
+                """SELECT p.id, p.phase_name, pp.status
+                   FROM phases p
+                   LEFT JOIN LATERAL (
+                       SELECT status FROM phase_progress
+                       WHERE phase_id = p.id
+                       ORDER BY updated_at DESC, id DESC
+                       LIMIT 1
+                   ) pp ON TRUE
+                   WHERE p.project_id = %s
+                   ORDER BY p.added_at, p.id""",
                 (proj_id,)
             )
 
@@ -1017,31 +1322,23 @@ elif page == "Project Detail" and st.session_state.active_project:
                 timeline_html = (
                     '<div style="margin-bottom:20px;">'
                     '<div style="font-size:10px;font-weight:600;text-transform:uppercase;'
-                         'letter-spacing:0.08em;color:#484f58;margin-bottom:12px;">Phase Timeline</div>'
+                         'letter-spacing:0.08em;color:#6e7681;margin-bottom:12px;">Phase Timeline</div>'
                     '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:0;">'
                 )
-                for t_idx, (t_id, t_name) in enumerate(timeline_phases):
-                    t_prog = qall(c,
-                        "SELECT status FROM phase_progress WHERE phase_id=%s ORDER BY updated_at DESC LIMIT 1",
-                        (t_id,)
-                    )
-                    t_status = t_prog[0] if t_prog else None
-
-                    # Ball color: green=current/in-progress, light blue=finished, grey=not started
+                for t_idx, (t_id, t_name, t_status) in enumerate(timeline_phases):
                     if t_status == "Finished":
-                        ball_color  = "#58a6ff"   # light blue
+                        ball_color  = "#58a6ff"
                         label_color = "#58a6ff"
                         ring        = "#58a6ff"
                     elif t_status in ("Started", "25%", "50%", "75%"):
-                        ball_color  = "#3fb950"   # green = active
+                        ball_color  = "#3fb950"
                         label_color = "#3fb950"
                         ring        = "#3fb950"
                     else:
-                        ball_color  = "#21262d"   # grey = not started
-                        label_color = "#484f58"
+                        ball_color  = "#21262d"
+                        label_color = "#6e7681"
                         ring        = "#30363d"
 
-                    # Connector line between balls (not after last)
                     connector = ""
                     if t_idx < len(timeline_phases) - 1:
                         connector = '<div style="flex:1;height:2px;background:#21262d;min-width:16px;max-width:40px;"></div>'
@@ -1052,7 +1349,7 @@ elif page == "Project Detail" and st.session_state.active_project:
                                f'background:{ball_color};border:2px solid {ring};'
                                f'box-shadow:0 0 6px {ball_color}33;"></div>'
                           f'<div style="font-size:9px;color:{label_color};font-weight:600;'
-                               f'text-align:center;max-width:60px;line-height:1.2;">{t_name}</div>'
+                               f'text-align:center;max-width:60px;line-height:1.2;">{esc(t_name)}</div>'
                         '</div>'
                         + connector
                     )
@@ -1061,8 +1358,8 @@ elif page == "Project Detail" and st.session_state.active_project:
 
             st.markdown("**Project Chat**")
 
-            messages = qone(c,
-                "SELECT sender, message, sent_at FROM chat_messages WHERE project_id=%s ORDER BY sent_at",
+            messages = qall(c,
+                "SELECT sender, message, sent_at FROM chat_messages WHERE project_id=%s ORDER BY sent_at, id",
                 (proj_id,)
             )
 
@@ -1070,17 +1367,19 @@ elif page == "Project Detail" and st.session_state.active_project:
             if messages:
                 for sender, message, sent_at in messages:
                     bubble_class = "mine" if sender == USERNAME else "theirs"
-                    chat_html += f"""
-                    <div style="display:flex;flex-direction:column;align-items:{'flex-end' if sender==USERNAME else 'flex-start'};margin-bottom:8px;">
-                        <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">
-                            {avatar_html(sender,'sm')}
-                            <span style="font-size:10px;color:#484f58;">{sender} · {sent_at}</span>
-                        </div>
-                        <div class="chat-bubble {bubble_class}">{message}</div>
-                    </div>
-                    """
+                    align        = "flex-end" if sender == USERNAME else "flex-start"
+                    av           = avatar_html(sender, "sm")
+                    chat_html += (
+                        f'<div style="display:flex;flex-direction:column;align-items:{align};margin-bottom:8px;">'
+                        f'<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">'
+                        f'{av}'
+                        f'<span style="font-size:10px;color:#6e7681;">{esc(sender)} · {fmt_ts(sent_at)}</span>'
+                        f'</div>'
+                        f'<div class="chat-bubble {bubble_class}">{esc(message)}</div>'
+                        f'</div>'
+                    )
             else:
-                chat_html += "<div style='text-align:center;color:#484f58;font-size:13px;padding:40px 0;'>No messages yet. Start the conversation!</div>"
+                chat_html += "<div style='text-align:center;color:#6e7681;font-size:13px;padding:40px 0;'>No messages yet. Start the conversation!</div>"
             chat_html += "</div>"
             st.markdown(chat_html, unsafe_allow_html=True)
 
@@ -1091,11 +1390,10 @@ elif page == "Project Detail" and st.session_state.active_project:
                     send_btn   = msg_cols[1].form_submit_button("Send")
 
                 if send_btn and chat_input.strip():
-                    qall(c,
+                    c.execute(
                         "INSERT INTO chat_messages (project_id, sender, message, sent_at) VALUES (%s,%s,%s,%s)",
                         (proj_id, USERNAME, chat_input.strip(), get_now())
                     )
-                    conn.commit()
                     st.rerun()
             else:
                 st.caption("Only project participants can send messages.")
@@ -1113,9 +1411,9 @@ elif page in ["Explorations", "Residential", "Commercial", "Licenses", "Bonds", 
     st.markdown(f"<div class='page-subtitle'>Projects in {page.lower()}.</div>", unsafe_allow_html=True)
 
     if page in ["Explorations", "Residential", "Commercial", "Licenses", "Bonds", "Payroll"]:
-        # Active (not completed) projects
-        rows = c.execute(
-            "SELECT id, name, created_by FROM projects WHERE category=%s AND (completed IS NULL OR completed=0) ORDER BY created_at DESC",
+        # Active (not completed) projects — boolean column now
+        rows = qall(c,
+            "SELECT id, name, created_by FROM projects WHERE category=%s AND completed IS NOT TRUE ORDER BY created_at DESC, id DESC",
             (page,)
         )
 
@@ -1132,7 +1430,7 @@ elif page in ["Explorations", "Residential", "Commercial", "Licenses", "Bonds", 
                         st.markdown(f"""
                         <a href="?open_proj={pid}" target="_self" style="text-decoration:none;">
                             <div class="proj-card">
-                                <div class="proj-card-name">{pname}</div>
+                                <div class="proj-card-name">{esc(pname)}</div>
                                 <div style="margin:8px 0;">{creator_html}</div>
                                 <div class="proj-card-participants">{part_mini}</div>
                             </div>
@@ -1149,7 +1447,7 @@ elif page in ["Explorations", "Residential", "Commercial", "Licenses", "Bonds", 
 
         # ── Completed Projects ──
         completed_rows = qall(c,
-            "SELECT id, name, created_by, completed_by, completed_at FROM projects WHERE category=%s AND completed=1 ORDER BY completed_at DESC",
+            "SELECT id, name, created_by, completed_by, completed_at FROM projects WHERE category=%s AND completed IS TRUE ORDER BY completed_at DESC",
             (page,)
         )
 
@@ -1157,7 +1455,7 @@ elif page in ["Explorations", "Residential", "Commercial", "Licenses", "Bonds", 
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown(
                 '<div style="font-size:11px;font-weight:600;text-transform:uppercase;'
-                'letter-spacing:0.08em;color:#484f58;margin-bottom:10px;">Completed Projects</div>',
+                'letter-spacing:0.08em;color:#6e7681;margin-bottom:10px;">Completed Projects</div>',
                 unsafe_allow_html=True
             )
             completed_html = ""
@@ -1171,16 +1469,15 @@ elif page in ["Explorations", "Residential", "Commercial", "Licenses", "Bonds", 
                     f'padding:8px 14px;margin-bottom:5px;cursor:pointer;">'
                     f'<span style="font-size:11px;background:#0d1a10;color:#3fb950;border:1px solid #1f4a24;'
                     f'border-radius:20px;padding:2px 8px;font-weight:700;">DONE</span>'
-                    f'<span style="font-size:13px;font-weight:600;color:#8b949e;flex:1;">{cpname}</span>'
+                    f'<span style="font-size:13px;font-weight:600;color:#8b949e;flex:1;">{esc(cpname)}</span>'
                     f'<span style="display:flex;gap:3px;">{av_html}</span>'
-                    f'<span style="font-size:11px;color:#484f58;">Completed by '
-                    f'<strong style="color:#8b949e">{cby}</strong> · {cat2}</span>'
+                    f'<span style="font-size:11px;color:#6e7681;">Completed by '
+                    f'<strong style="color:#8b949e">{esc(cby)}</strong> · {fmt_ts(cat2)}</span>'
                     f'</div></a>'
                 )
             st.markdown(completed_html, unsafe_allow_html=True)
     else:
         st.markdown('<div class="coming-soon">🚧 This section is coming soon.</div>', unsafe_allow_html=True)
-
 
 
 # ══════════════════════════════════════════
@@ -1190,7 +1487,7 @@ elif page == "Accounting":
     st.markdown("<div class='page-title'>💼 Accounting</div>", unsafe_allow_html=True)
     st.markdown("<div class='page-subtitle'>Completed projects — billing and payment tracking.</div>", unsafe_allow_html=True)
 
-    acc_rows = qall(c, 
+    acc_rows = qall(c,
         "SELECT id, project_id, project_name, category, created_by, completed_by, completed_at, billed, received FROM accounting ORDER BY completed_at DESC"
     )
 
@@ -1203,7 +1500,6 @@ elif page == "Accounting":
         </div>
         """, unsafe_allow_html=True)
     else:
-        # Check if opening a specific accounting entry
         if st.session_state.get("active_accounting"):
             acc_id = st.session_state.active_accounting
             entry  = qall(c,
@@ -1214,38 +1510,38 @@ elif page == "Accounting":
             if not entry:
                 st.error("Entry not found.")
             else:
-                a_id, a_proj_id, a_name, a_cat, a_creator, a_cby, a_cat2, a_billed, a_received = entry
+                (a_id, a_proj_id, a_name, a_cat, a_creator, a_cby, a_cat2,
+                 a_billed, a_received) = entry[0]
                 participants = get_participants(a_proj_id)
 
                 if st.button("← Back to Accounting", key="back_acc"):
                     st.session_state.active_accounting = None
                     st.rerun()
 
-                st.markdown(f"<div class='page-title'>📁 {a_name}</div>", unsafe_allow_html=True)
-                st.markdown(f"<div class='page-subtitle'>{a_cat} · Completed</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='page-title'>📁 {esc(a_name)}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='page-subtitle'>{esc(a_cat)} · Completed</div>", unsafe_allow_html=True)
 
                 left_col, right_col = st.columns([1, 1], gap="large")
 
                 with left_col:
-                    # Project info
-                    part_html      = "".join(avatar_html(p, "sm") for p in participants)
+                    part_html       = "".join(avatar_html(p, "sm") for p in participants)
                     part_names_html = "".join(
-                        f'<span style="font-size:11px;color:#8b949e;align-self:center;">{p}</span>'
+                        f'<span style="font-size:11px;color:#8b949e;align-self:center;">{esc(p)}</span>'
                         for p in participants
                     )
                     orig_proj = qone(c,
                         "SELECT est_duration, start_date FROM projects WHERE id=%s", (a_proj_id,)
                     )
                     est_dur   = orig_proj[0] if orig_proj else "—"
-                    start_d   = orig_proj[1] if orig_proj else "—"
+                    start_d   = as_date(orig_proj[1]) if orig_proj else "—"
 
                     st.markdown(f"""
                     <div class="detail-box">
-                        <div class="detail-label">Category</div><div class="detail-value">{a_cat}</div>
-                        <div class="detail-label">Estimated Duration</div><div class="detail-value">{est_dur or "—"}</div>
+                        <div class="detail-label">Category</div><div class="detail-value">{esc(a_cat)}</div>
+                        <div class="detail-label">Estimated Duration</div><div class="detail-value">{esc(est_dur) or "—"}</div>
                         <div class="detail-label">Starting Date</div><div class="detail-value">{start_d or "—"}</div>
-                        <div class="detail-label">Created By</div><div class="detail-value">{a_creator}</div>
-                        <div class="detail-label">Completed By</div><div class="detail-value">{a_cby} · {a_cat2}</div>
+                        <div class="detail-label">Created By</div><div class="detail-value">{esc(a_creator)}</div>
+                        <div class="detail-label">Completed By</div><div class="detail-value">{esc(a_cby)} · {fmt_ts(a_cat2)}</div>
                         <div class="detail-label">Participants</div>
                         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
                             {part_html}{part_names_html}
@@ -1258,7 +1554,7 @@ elif page == "Accounting":
                     # ── Billed status ──
                     st.markdown(
                         '<div style="font-size:10px;font-weight:600;text-transform:uppercase;'
-                        'letter-spacing:0.08em;color:#484f58;margin-bottom:8px;">Billed</div>',
+                        'letter-spacing:0.08em;color:#6e7681;margin-bottom:8px;">Billed</div>',
                         unsafe_allow_html=True
                     )
                     billed_opts   = ["Not Completed", "Completed"]
@@ -1267,7 +1563,7 @@ elif page == "Accounting":
                     for i, opt in enumerate(billed_opts):
                         is_sel     = (a_billed == opt)
                         btn_style  = "border: 1px solid " + (billed_colors[opt] if is_sel else "#30363d")
-                        btn_color  = billed_colors[opt] if is_sel else "#484f58"
+                        btn_color  = billed_colors[opt] if is_sel else "#6e7681"
                         b_cols[i].markdown(
                             f'<div style="background:{"#161b22" if is_sel else "#0d1117"};'
                             f'{btn_style};border-radius:5px;padding:6px;text-align:center;'
@@ -1276,7 +1572,6 @@ elif page == "Accounting":
                         )
                         if b_cols[i].button(opt, key=f"billed_{opt}_{a_id}"):
                             c.execute("UPDATE accounting SET billed=%s WHERE id=%s", (opt, a_id))
-                            conn.commit()
                             st.rerun()
 
                     st.markdown("<br>", unsafe_allow_html=True)
@@ -1284,7 +1579,7 @@ elif page == "Accounting":
                     # ── Received status ──
                     st.markdown(
                         '<div style="font-size:10px;font-weight:600;text-transform:uppercase;'
-                        'letter-spacing:0.08em;color:#484f58;margin-bottom:8px;">Received</div>',
+                        'letter-spacing:0.08em;color:#6e7681;margin-bottom:8px;">Received</div>',
                         unsafe_allow_html=True
                     )
                     recv_opts   = ["No", "Partially", "Completed"]
@@ -1293,7 +1588,7 @@ elif page == "Accounting":
                     for i, opt in enumerate(recv_opts):
                         is_sel    = (a_received == opt)
                         btn_style = "border: 1px solid " + (recv_colors[opt] if is_sel else "#30363d")
-                        btn_color = recv_colors[opt] if is_sel else "#484f58"
+                        btn_color = recv_colors[opt] if is_sel else "#6e7681"
                         r_cols[i].markdown(
                             f'<div style="background:{"#161b22" if is_sel else "#0d1117"};'
                             f'{btn_style};border-radius:5px;padding:6px;text-align:center;'
@@ -1302,13 +1597,12 @@ elif page == "Accounting":
                         )
                         if r_cols[i].button(opt, key=f"recv_{opt}_{a_id}"):
                             c.execute("UPDATE accounting SET received=%s WHERE id=%s", (opt, a_id))
-                            conn.commit()
                             st.rerun()
 
                 with right_col:
                     st.markdown("**Project Chat**")
                     msgs = c.execute(
-                        "SELECT sender, message, sent_at FROM accounting_chat WHERE project_id=%s ORDER BY sent_at",
+                        "SELECT sender, message, sent_at FROM accounting_chat WHERE project_id=%s ORDER BY sent_at, id",
                         (a_proj_id,)
                     )
 
@@ -1321,12 +1615,12 @@ elif page == "Accounting":
                             chat_html += (
                                 f'<div style="display:flex;flex-direction:column;align-items:{align};margin-bottom:8px;">'
                                 f'<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">'
-                                f'{av}<span style="font-size:10px;color:#484f58;">{sender} · {sent_at}</span></div>'
-                                f'<div class="chat-bubble {bubble_class}">{message}</div>'
+                                f'{av}<span style="font-size:10px;color:#6e7681;">{esc(sender)} · {fmt_ts(sent_at)}</span></div>'
+                                f'<div class="chat-bubble {bubble_class}">{esc(message)}</div>'
                                 f'</div>'
                             )
                     else:
-                        chat_html += "<div style='text-align:center;color:#484f58;font-size:13px;padding:40px 0;'>No messages yet.</div>"
+                        chat_html += "<div style='text-align:center;color:#6e7681;font-size:13px;padding:40px 0;'>No messages yet.</div>"
                     chat_html += "</div>"
                     st.markdown(chat_html, unsafe_allow_html=True)
 
@@ -1340,7 +1634,6 @@ elif page == "Accounting":
                             "INSERT INTO accounting_chat (project_id, sender, message, sent_at) VALUES (%s,%s,%s,%s)",
                             (a_proj_id, USERNAME, chat_input.strip(), get_now())
                         )
-                        conn.commit()
                         st.rerun()
 
         else:
@@ -1349,20 +1642,20 @@ elif page == "Accounting":
             recv_color    = {"No": "#f85149", "Partially": "#d29922", "Completed": "#3fb950"}
 
             for a_id, a_proj_id, a_name, a_cat, a_creator, a_cby, a_cat2, a_billed, a_received in acc_rows:
-                bc = billed_color.get(a_billed, "#484f58")
-                rc = recv_color.get(a_received, "#484f58")
+                bc = billed_color.get(a_billed, "#6e7681")
+                rc = recv_color.get(a_received, "#6e7681")
                 cat_icon = {"Explorations": "🔭", "Residential": "🏡", "Commercial": "🏢"}.get(a_cat, "📁")
                 st.markdown(
                     f'<div style="display:flex;align-items:center;gap:10px;'
                     f'background:#161b22;border:1px solid #21262d;border-radius:6px;'
                     f'padding:10px 14px;margin-bottom:6px;">'
                     f'<span style="font-size:14px;">{cat_icon}</span>'
-                    f'<span style="font-size:13px;font-weight:600;color:#e6edf3;flex:1;">{a_name}</span>'
+                    f'<span style="font-size:13px;font-weight:600;color:#e6edf3;flex:1;">{esc(a_name)}</span>'
                     f'<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;'
-                    f'background:#161b22;border:1px solid {bc};color:{bc};">BILLED: {a_billed}</span>'
+                    f'background:#161b22;border:1px solid {bc};color:{bc};">BILLED: {esc(a_billed)}</span>'
                     f'<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;'
-                    f'background:#161b22;border:1px solid {rc};color:{rc};">RECEIVED: {a_received}</span>'
-                    f'<span style="font-size:11px;color:#484f58;">{a_cat2}</span>'
+                    f'background:#161b22;border:1px solid {rc};color:{rc};">RECEIVED: {esc(a_received)}</span>'
+                    f'<span style="font-size:11px;color:#6e7681;">{fmt_ts(a_cat2)}</span>'
                     f'</div>',
                     unsafe_allow_html=True
                 )
@@ -1392,11 +1685,10 @@ elif page == "Employees":
             if new_emp_name.strip():
                 try:
                     c.execute("INSERT INTO employees (name) VALUES (%s)", (new_emp_name.strip(),))
-                    conn.commit()
-                    st.success(f"{new_emp_name.strip()} added!")
+                    st.success(f"{esc(new_emp_name.strip())} added!")
                     st.session_state.show_add_emp = False
                     st.rerun()
-                except Exception:
+                except psycopg2.errors.UniqueViolation:
                     st.warning("That employee already exists.")
             else:
                 st.warning("Please enter a name.")
@@ -1430,7 +1722,7 @@ elif page == "Employees":
                             background:{bg};border:1px solid {border};
                             border-radius:8px;padding:8px 12px;height:40px;">
                     {avatar_html(emp, "sm")}
-                    <span style="font-size:13px;font-weight:{weight};color:{color};">{emp}</span>
+                    <span style="font-size:13px;font-weight:{weight};color:{color};">{esc(emp)}</span>
                 </div>
                 """, unsafe_allow_html=True)
                 if row_right.button("Info", key=f"sel_emp_{emp}"):
@@ -1444,13 +1736,12 @@ elif page == "Employees":
                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
                     {avatar_html(emp, "lg")}
                     <div>
-                        <div style="font-size:18px;font-weight:700;color:#e6edf3;">{emp}</div>
-                        <div style="font-size:12px;color:#484f58;">Employee</div>
+                        <div style="font-size:18px;font-weight:700;color:#e6edf3;">{esc(emp)}</div>
+                        <div style="font-size:12px;color:#6e7681;">Employee</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
 
-                # Get all projects this employee is participating in
                 emp_projects = qall(c, """
                     SELECT p.id, p.name, p.category, p.created_by, p.created_at
                     FROM projects p
@@ -1471,11 +1762,11 @@ elif page == "Employees":
                                  onmouseover="this.style.borderColor='#58a6ff'"
                                  onmouseout="this.style.borderColor='#21262d'">
                                 <div class="a-card-top">
-                                    <span class="badge badge-project">{pcat}</span>
-                                    <span class="a-card-name">{pname}</span>
+                                    <span class="badge badge-project">{esc(pcat)}</span>
+                                    <span class="a-card-name">{esc(pname)}</span>
                                 </div>
                                 <div class="a-card-meta" style="margin-bottom:6px;">
-                                    Created by <strong style="color:#8b949e">{pcreator}</strong> · {pdate}
+                                    Created by <strong style="color:#8b949e">{esc(pcreator)}</strong> · {fmt_ts(pdate)}
                                 </div>
                                 <div style="display:flex;gap:4px;">{part_avatars}</div>
                             </div>
@@ -1484,7 +1775,7 @@ elif page == "Employees":
 
                 else:
                     st.markdown("""
-                    <div style="color:#484f58;font-size:13px;padding:20px 0;">
+                    <div style="color:#6e7681;font-size:13px;padding:20px 0;">
                         Not assigned to any projects yet.
                     </div>
                     """, unsafe_allow_html=True)
