@@ -290,6 +290,43 @@ footer                          { display: none !important; }
     border-color: #ff9eb5 !important;
     color: #ff9eb5 !important;
 }
+
+/* ── Filter chips (Tasks page) ── */
+.chip-row {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-bottom: 14px;
+}
+.chip-row .chip {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    border: 1px solid #30363d;
+    background: #161b22;
+    color: #8b949e;
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+}
+.chip-row .chip:hover { border-color: #58a6ff; color: #58a6ff; }
+.chip-row .chip.active {
+    background: #1c2128; border-color: #58a6ff; color: #58a6ff;
+}
+.chip-row .chip.open.active         { border-color: #58a6ff; color: #58a6ff; background: #0c1929; }
+.chip-row .chip.progress.active     { border-color: #d29922; color: #d29922; background: #1a1405; }
+.chip-row .chip.done.active         { border-color: #3fb950; color: #3fb950; background: #0d1a10; }
+.chip-row .chip.overdue.active      { border-color: #f85149; color: #f85149; background: #1a0909; }
+.chip-row .chip .count {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 0 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    background: #21262d;
+    color: inherit;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -479,6 +516,7 @@ if 'confirm_delete'    not in st.session_state: st.session_state.confirm_delete 
 if 'active_accounting' not in st.session_state: st.session_state.active_accounting = None
 if 'edit_task'         not in st.session_state: st.session_state.edit_task = None
 if 'confirm_del_task'  not in st.session_state: st.session_state.confirm_del_task = None
+if 'task_f_status_chip' not in st.session_state: st.session_state.task_f_status_chip = "Active"
 
 # ── Handle click navigation via query params ──
 _qp = st.query_params
@@ -494,6 +532,8 @@ if "open_proj" in _qp:
     st.rerun()
 
 USERNAME = "Guest"
+
+# ═══════ PART 2 STARTS HERE ═══════
 
 # ─────────────────────────────────────────
 # SIDEBAR
@@ -529,7 +569,13 @@ with st.sidebar:
     st.divider()
     st.markdown("<div class='nav-section'>Sections</div>", unsafe_allow_html=True)
 
-    if st.button("✅  Tasks", use_container_width=True, key="nav_Tasks"):
+    # Live overdue count for the sidebar badge
+    _overdue_count = qone(c,
+        "SELECT COUNT(*) FROM tasks WHERE status <> 'Done' AND due_date < %s",
+        (date.today(),)
+    )[0] or 0
+    tasks_label = f"✅  Tasks  ({_overdue_count})" if _overdue_count > 0 else "✅  Tasks"
+    if st.button(tasks_label, use_container_width=True, key="nav_Tasks"):
         st.session_state.page = "Tasks"
         st.session_state.active_project = None
         st.session_state.edit_task = None
@@ -551,8 +597,6 @@ with st.sidebar:
         if st.button(label, use_container_width=True, key=f"nav_{page_name}"):
             st.session_state.page = page_name
             st.session_state.active_project = None
-
-# ═══════ PART 2 STARTS HERE ═══════
 
 # ─────────────────────────────────────────
 # MAIN CONTENT
@@ -835,6 +879,8 @@ elif page == "Tasks":
     projects_all = qall(c, "SELECT id, name FROM projects ORDER BY name")
     proj_names   = {pid: pname for pid, pname in projects_all}
 
+# ═══════ PART 3 STARTS HERE ═══════
+
     # ── Edit panel (opens when ✏️ is clicked) ──
     edit_id = st.session_state.get("edit_task")
     if edit_id:
@@ -886,32 +932,88 @@ elif page == "Tasks":
         else:
             st.session_state.confirm_del_task = None
 
-    # ── Filters ──
-    f1, f2, f3 = st.columns([2, 3, 3])
-    status_filter = f1.selectbox("Status", ["Active", "Open", "In Progress", "Done", "All"], key="task_f_status")
-    proj_filter   = f2.selectbox("Project", ["All projects", "No project"] + [pid for pid, _ in projects_all],
-                                 format_func=lambda v: v if isinstance(v, str) else proj_names.get(v, "?"),
-                                 key="task_f_proj")
-    search_text   = f3.text_input("Search", placeholder="Search tasks…", key="task_f_search")
+    # ── Status chips (visual) ──
+    status_filter = st.session_state.get("task_f_status_chip", "Active")
+    chips_def = [
+        ("Active",      "Active",       "chip"),
+        ("Open",        "Open",         "chip open"),
+        ("In Progress", "In Progress",  "chip progress"),
+        ("Done",        "Done",         "chip done"),
+        ("Overdue",     "Overdue",      "chip overdue"),
+        ("All",         "All",          "chip"),
+    ]
+    chip_html = "<div class='chip-row'>"
+    for key, label, cls in chips_def:
+        is_active = (status_filter == key)
+        if key == "Active":
+            cnt = status_counts.get("Open", 0) + status_counts.get("In Progress", 0)
+        elif key == "Overdue":
+            cnt = overdue_n
+        elif key in status_counts:
+            cnt = status_counts[key]
+        else:
+            cnt = 0
+        chip_cls = cls + (" active" if is_active else "")
+        chip_html += f"<span class='{chip_cls}'>{label}<span class='count'>{cnt}</span></span>"
+    chip_html += "</div>"
+    st.markdown(chip_html, unsafe_allow_html=True)
 
+    # ── Clickable chips via invisible buttons ──
+    chip_cols = st.columns(len(chips_def))
+    for i, (key, label, _cls) in enumerate(chips_def):
+        if chip_cols[i].button(label, key=f"task_chip_{key}", use_container_width=True):
+            st.session_state.task_f_status_chip = key
+            st.rerun()
+
+    # ── Secondary filters ──
+    f1, f2, f3, f4 = st.columns([3, 2, 3, 2])
+    proj_filter = f1.selectbox("Project", ["All projects", "No project"] + [pid for pid, _ in projects_all],
+                               format_func=lambda v: v if isinstance(v, str) else proj_names.get(v, "?"),
+                               key="task_f_proj")
+    due_filter  = f2.selectbox("Due", ["Any", "Due today", "Due this week", "Overdue only"], key="task_f_due")
+    search_text = f3.text_input("Search", placeholder="Search tasks…", key="task_f_search")
+    sort_by     = f4.selectbox("Sort", ["Due date", "Recently added", "Alphabetical"], key="task_f_sort")
+
+    # ── Build WHERE ──
     where, params = [], []
     if status_filter == "Active":
         where.append("t.status <> 'Done'")
-    elif status_filter != "All":
+    elif status_filter in ("Open", "In Progress", "Done"):
         where.append("t.status = %s"); params.append(status_filter)
+    if status_filter == "Overdue":
+        where.append("t.status <> 'Done' AND t.due_date < %s"); params.append(date.today())
+
     if proj_filter == "No project":
         where.append("t.project_id IS NULL")
     elif proj_filter != "All projects":
         where.append("t.project_id = %s"); params.append(proj_filter)
+
+    today_d = date.today()
+    if due_filter == "Due today":
+        where.append("t.due_date = %s"); params.append(today_d)
+    elif due_filter == "Due this week":
+        where.append("t.due_date >= %s AND t.due_date <= %s")
+        params.extend([today_d, today_d + timedelta(days=7)])
+    elif due_filter == "Overdue only":
+        where.append("t.status <> 'Done' AND t.due_date < %s"); params.append(today_d)
+
     if search_text.strip():
         pat = search_text.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         where.append("t.task_name ILIKE %s"); params.append("%" + pat + "%")
+
+    # ── ORDER BY from sort selector ──
+    order_clauses = {
+        "Due date":       "(t.status = 'Done'), t.due_date NULLS LAST, t.id DESC",
+        "Recently added": "t.id DESC",
+        "Alphabetical":   "t.task_name ASC",
+    }
+    order_by = order_clauses.get(sort_by, order_clauses["Due date"])
 
     sql = ("SELECT t.id, t.task_name, t.status, t.due_date, t.created_by, t.project_id, p.name, p.category "
            "FROM tasks t LEFT JOIN projects p ON p.id = t.project_id")
     if where:
         sql += " WHERE " + " AND ".join(where)
-    sql += " ORDER BY (t.status = 'Done'), t.due_date NULLS LAST, t.id DESC"
+    sql += " ORDER BY " + order_by
     tasks = qall(c, sql, tuple(params))
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -1018,7 +1120,7 @@ elif page == "New Project":
         else:
             st.warning("Please enter a project name.")
 
-# ═══════ PART 3 STARTS HERE ═══════
+# ═══════ PART 4 STARTS HERE ═══════
 
 # ══════════════════════════════════════════
 # PROJECT DETAIL PAGE
