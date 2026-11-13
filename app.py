@@ -17,15 +17,15 @@ def esc(x):
 st.set_page_config(page_title="My-Task-Box", page_icon="📦", layout="wide")
 
 # ─────────────────────────────────────────
-# CSS
+# CSS — LIGHT THEME
 # ─────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 html, body, .stApp, [data-testid="stAppViewContainer"] {
-    background-color: #0d1117 !important;
-    color: #e6edf3 !important;
+    background-color: #f6f8fa !important;
+    color: #1f2328 !important;
     font-family: 'Inter', sans-serif !important;
 }
 header[data-testid="stHeader"] { display: none !important; }
@@ -42,33 +42,33 @@ footer                          { display: none !important; }
 
 /* ── Sidebar ── */
 [data-testid="stSidebar"] {
-    background-color: #010409 !important;
-    border-right: 1px solid #21262d !important;
+    background-color: #ffffff !important;
+    border-right: 1px solid #d0d7de !important;
     padding: 0 !important;
 }
 [data-testid="stSidebar"] > div:first-child { padding: 0 !important; }
 
 .welcome-block {
     padding: 20px 16px 16px 16px;
-    border-bottom: 1px solid #21262d;
+    border-bottom: 1px solid #eaeef2;
     margin-bottom: 8px;
 }
 .welcome-label {
     font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
-    text-transform: uppercase; color: #6e7681; margin-bottom: 4px;
+    text-transform: uppercase; color: #656d76; margin-bottom: 4px;
 }
-.welcome-name { font-size: 16px; font-weight: 700; color: #e6edf3; }
+.welcome-name { font-size: 16px; font-weight: 700; color: #1f2328; }
 
 .nav-section {
     font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
-    text-transform: uppercase; color: #6e7681; padding: 12px 16px 4px 16px;
+    text-transform: uppercase; color: #656d76; padding: 12px 16px 4px 16px;
 }
 
 [data-testid="stSidebar"] .stButton > button {
     background: transparent !important; border: none !important;
     border-radius: 6px !important; font-family: 'Inter', sans-serif !important;
     font-size: 13px !important; font-weight: 400 !important;
-    color: #8b949e !important; text-align: left !important;
+    color: #57606a !important; text-align: left !important;
     width: 100% !important; padding: 6px 16px !important;
     height: 34px !important; box-shadow: none !important;
     margin: 1px 0 !important; transition: background 0.12s, color 0.12s !important;
@@ -78,47 +78,62 @@ footer                          { display: none !important; }
     margin: 0 !important; color: inherit !important;
 }
 [data-testid="stSidebar"] .stButton > button:hover {
-    background-color: #161b22 !important; color: #e6edf3 !important;
+    background-color: #f6f8fa !important; color: #1f2328 !important;
 }
-[data-testid="nav_feed"] > button,
-[data-testid="nav_feed"] > button p { color: #FA8072 !important; font-weight: 700 !important; }
-[data-testid="nav_new_task"] > button,
-[data-testid="nav_new_task"] > button p { color: #3fb950 !important; font-weight: 700 !important; }
-[data-testid="nav_new_proj"] > button,
-[data-testid="nav_new_proj"] > button p { color: #3fb950 !important; font-weight: 700 !important; }
 
-[data-testid="stSidebar"] hr { border-color: #21262d !important; margin: 6px 0 !important; }
+/* ── Main Feed highlight — thicker salmon accent ── */
+[data-testid="nav_feed"] > button,
+[data-testid="nav_feed"] > button p {
+    color: #cf4d3d !important;
+    font-weight: 800 !important;
+    font-size: 14px !important;
+}
+[data-testid="nav_feed"] > button {
+    border-left: 3px solid #FA8072 !important;
+    padding-left: 13px !important;
+    background-color: #fff5f3 !important;
+}
+[data-testid="nav_feed"] > button:hover {
+    background-color: #ffe9e5 !important;
+}
+
+[data-testid="nav_new_task"] > button,
+[data-testid="nav_new_task"] > button p { color: #1a7f37 !important; font-weight: 700 !important; }
+[data-testid="nav_new_proj"] > button,
+[data-testid="nav_new_proj"] > button p { color: #1a7f37 !important; font-weight: 700 !important; }
+
+[data-testid="stSidebar"] hr { border-color: #eaeef2 !important; margin: 6px 0 !important; }
 
 /* ── Main content ── */
 [data-testid="stMainBlockContainer"] {
-    background-color: #0d1117 !important; padding: 32px 40px !important;
+    background-color: #f6f8fa !important; padding: 32px 40px !important;
 }
 .page-title {
-    font-size: 24px; font-weight: 700; color: #e6edf3;
+    font-size: 24px; font-weight: 700; color: #1f2328;
     margin-bottom: 4px; font-family: 'Inter', sans-serif;
 }
 .page-subtitle {
-    font-size: 13px; color: #6e7681;
+    font-size: 13px; color: #656d76;
     margin-bottom: 28px; font-family: 'Inter', sans-serif;
 }
 
 /* ── Activity card ── */
 .a-card {
-    background: #161b22; border: 1px solid #21262d;
+    background: #ffffff; border: 1px solid #d0d7de;
     border-radius: 8px; padding: 14px 18px;
     margin-bottom: 8px; font-family: 'Inter', sans-serif;
 }
 .a-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-.a-card-name { font-size: 14px; font-weight: 600; color: #e6edf3; }
-.a-card-meta { font-size: 12px; color: #6e7681; }
+.a-card-name { font-size: 14px; font-weight: 600; color: #1f2328; }
+.a-card-meta { font-size: 12px; color: #656d76; }
 .a-card-avatars { display: flex; gap: 4px; margin-top: 6px; }
 .badge {
     display: inline-block; font-size: 10px; font-weight: 700;
     letter-spacing: 0.05em; text-transform: uppercase;
     padding: 2px 8px; border-radius: 20px;
 }
-.badge-task    { background: #0d1a10; color: #3fb950; border: 1px solid #1f4a24; }
-.badge-project { background: #0c1929; color: #58a6ff; border: 1px solid #1a3a5c; }
+.badge-task    { background: #dafbe1; color: #1a7f37; border: 1px solid #aee5bd; }
+.badge-project { background: #ddf4ff; color: #0969da; border: 1px solid #b6d9f7; }
 
 /* ── Avatar circle ── */
 .avatar {
@@ -142,38 +157,45 @@ footer                          { display: none !important; }
 
 /* ── Project card (square) ── */
 .proj-card {
-    background: #161b22; border: 1px solid #21262d;
+    background: #ffffff; border: 1px solid #d0d7de;
     border-radius: 10px; padding: 16px;
     width: 160px; height: 160px;
     display: flex; flex-direction: column;
     align-items: center; justify-content: space-between;
-    cursor: pointer; transition: border-color 0.15s, background 0.15s;
+    cursor: pointer; transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
     font-family: 'Inter', sans-serif;
+    box-shadow: 0 1px 2px rgba(31, 35, 40, 0.04);
 }
-.proj-card:hover { border-color: #58a6ff; background: #1c2128; }
+.proj-card:hover {
+    border-color: #0969da;
+    background: #f6f8fa;
+    box-shadow: 0 3px 8px rgba(31, 35, 40, 0.08);
+}
 .proj-card-name {
-    font-size: 13px; font-weight: 600; color: #e6edf3;
+    font-size: 13px; font-weight: 600; color: #1f2328;
     text-align: center; word-break: break-word;
 }
 .proj-card-participants { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; }
 
 /* ── Project detail ── */
 .detail-box {
-    background: #161b22; border: 1px solid #21262d;
+    background: #ffffff; border: 1px solid #d0d7de;
     border-radius: 8px; padding: 20px;
     font-family: 'Inter', sans-serif;
+    box-shadow: 0 1px 2px rgba(31, 35, 40, 0.04);
 }
-.detail-label { font-size: 11px; color: #6e7681; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px; }
-.detail-value { font-size: 14px; color: #e6edf3; margin-bottom: 14px; }
+.detail-label { font-size: 11px; color: #656d76; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px; }
+.detail-value { font-size: 14px; color: #1f2328; margin-bottom: 14px; }
 
 /* ── Phase card ── */
 .phase-card {
-    background: #0d1117; border: 1px solid #30363d;
+    background: #ffffff; border: 1px solid #d0d7de;
     border-radius: 6px; padding: 12px 14px; margin-bottom: 8px;
     font-family: 'Inter', sans-serif;
+    box-shadow: 0 1px 2px rgba(31, 35, 40, 0.04);
 }
-.phase-title { font-size: 13px; font-weight: 600; color: #e6edf3; margin-bottom: 4px; }
-.phase-meta  { font-size: 11px; color: #6e7681; }
+.phase-title { font-size: 13px; font-weight: 600; color: #1f2328; margin-bottom: 4px; }
+.phase-meta  { font-size: 11px; color: #656d76; }
 
 /* ── Chat ── */
 .chat-bubble {
@@ -181,84 +203,84 @@ footer                          { display: none !important; }
     font-size: 13px; font-family: 'Inter', sans-serif;
     max-width: 85%;
 }
-.chat-bubble.mine    { background: #1f4a24; color: #e6edf3; margin-left: auto; }
-.chat-bubble.theirs  { background: #21262d; color: #e6edf3; }
-.chat-sender { font-size: 10px; color: #6e7681; margin-bottom: 2px; }
-.chat-time   { font-size: 10px; color: #6e7681; margin-top: 2px; text-align: right; }
+.chat-bubble.mine    { background: #dafbe1; color: #1f2328; margin-left: auto; }
+.chat-bubble.theirs  { background: #eaeef2; color: #1f2328; }
+.chat-sender { font-size: 10px; color: #656d76; margin-bottom: 2px; }
+.chat-time   { font-size: 10px; color: #656d76; margin-top: 2px; text-align: right; }
 
 /* ── Forms ── */
 .stTextInput > label, .stSelectbox > label, .stTextArea > label,
 .stMultiSelect > label, .stDateInput > label {
     font-size: 13px !important; font-weight: 500 !important;
-    color: #8b949e !important; font-family: 'Inter', sans-serif !important;
+    color: #57606a !important; font-family: 'Inter', sans-serif !important;
 }
 .stTextInput > div > div > input, .stTextArea textarea {
-    background-color: #161b22 !important; border: 1px solid #30363d !important;
-    border-radius: 6px !important; color: #e6edf3 !important;
+    background-color: #ffffff !important; border: 1px solid #d0d7de !important;
+    border-radius: 6px !important; color: #1f2328 !important;
     font-family: 'Inter', sans-serif !important; font-size: 13px !important;
 }
 .stSelectbox > div > div, .stMultiSelect > div > div {
-    background-color: #161b22 !important; border: 1px solid #30363d !important;
-    border-radius: 6px !important; color: #e6edf3 !important;
+    background-color: #ffffff !important; border: 1px solid #d0d7de !important;
+    border-radius: 6px !important; color: #1f2328 !important;
     font-family: 'Inter', sans-serif !important; font-size: 13px !important;
 }
 .stFormSubmitButton > button {
-    background-color: #238636 !important; color: #ffffff !important;
-    border: 1px solid #2ea043 !important; border-radius: 6px !important;
+    background-color: #1f883d !important; color: #ffffff !important;
+    border: 1px solid #1a7f37 !important; border-radius: 6px !important;
     font-family: 'Inter', sans-serif !important; font-weight: 600 !important;
     font-size: 13px !important; padding: 6px 20px !important;
 }
-.stFormSubmitButton > button:hover { background-color: #2ea043 !important; }
+.stFormSubmitButton > button:hover { background-color: #1a7f37 !important; }
 
 .empty-state {
-    text-align: center; padding: 80px 20px; color: #6e7681;
+    text-align: center; padding: 80px 20px; color: #656d76;
     font-family: 'Inter', sans-serif; font-size: 14px;
 }
 .empty-icon { font-size: 48px; margin-bottom: 12px; }
 .coming-soon {
-    background: #161b22; border: 1px solid #21262d; border-radius: 8px;
-    padding: 40px; text-align: center; color: #6e7681;
+    background: #ffffff; border: 1px solid #d0d7de; border-radius: 8px;
+    padding: 40px; text-align: center; color: #656d76;
     font-family: 'Inter', sans-serif; font-size: 14px; margin-top: 16px;
 }
-.stAlert { background-color: #161b22 !important; border-radius: 6px !important; font-family: 'Inter', sans-serif !important; }
+.stAlert { background-color: #ffffff !important; border-radius: 6px !important; font-family: 'Inter', sans-serif !important; }
 
 /* ── Delete project button ── */
 [data-testid="del_project"] > button {
     background: transparent !important;
-    border: 1px solid #3d1e1e !important;
+    border: 1px solid #ffcecb !important;
     border-radius: 6px !important;
-    color: #f85149 !important;
+    color: #cf222e !important;
     font-size: 12px !important;
     font-weight: 600 !important;
     transition: all 0.12s !important;
 }
 [data-testid="del_project"] > button:hover {
-    background: #3d1e1e !important;
-    border-color: #f85149 !important;
+    background: #ffebe9 !important;
+    border-color: #cf222e !important;
 }
 
 /* ── Delete phase button ── */
 [data-testid^="del_phase_"] > button {
     background: transparent !important;
-    border: 1px solid #3d1e1e !important;
+    border: 1px solid #ffcecb !important;
     border-radius: 4px !important;
-    color: #f85149 !important;
+    color: #cf222e !important;
     font-size: 12px !important;
     height: 26px !important;
     padding: 0 !important;
     transition: all 0.12s !important;
 }
 [data-testid^="del_phase_"] > button:hover {
-    background: #3d1e1e !important;
-    border-color: #f85149 !important;
+    background: #ffebe9 !important;
+    border-color: #cf222e !important;
 }
 
 /* ── Phase progress buttons ── */
 [data-testid^="prog_"] > button {
-    background: #21262d !important;
-    border: 1px solid #30363d !important;
+    background: #f6f8fa !important;
+    border: 1px solid #d0d7de !important;
     border-radius: 4px !important;
-    color: #6e7681 !important;
+    color: #656d76 !important;
     font-size: 10px !important;
     font-weight: 600 !important;
     padding: 3px 0 !important;
@@ -267,17 +289,17 @@ footer                          { display: none !important; }
     transition: all 0.12s !important;
 }
 [data-testid^="prog_"] > button:hover {
-    background: #161b22 !important;
-    border-color: #58a6ff !important;
-    color: #58a6ff !important;
+    background: #ffffff !important;
+    border-color: #0969da !important;
+    color: #0969da !important;
 }
 
 /* ── Employee Info button — small compact badge ── */
 [data-testid^="sel_emp_"] > button {
-    background: #21262d !important;
-    border: 1px solid #30363d !important;
+    background: #f6f8fa !important;
+    border: 1px solid #d0d7de !important;
     border-radius: 6px !important;
-    color: #8b949e !important;
+    color: #57606a !important;
     font-size: 11px !important;
     font-weight: 600 !important;
     padding: 4px 10px !important;
@@ -286,9 +308,9 @@ footer                          { display: none !important; }
     transition: background 0.12s, color 0.12s !important;
 }
 [data-testid^="sel_emp_"] > button:hover {
-    background: #2d1b2e !important;
-    border-color: #ff9eb5 !important;
-    color: #ff9eb5 !important;
+    background: #fff0f3 !important;
+    border-color: #d1493b !important;
+    color: #d1493b !important;
 }
 
 /* ── Filter chips (Tasks page) ── */
@@ -303,28 +325,28 @@ footer                          { display: none !important; }
     font-size: 12px;
     font-weight: 600;
     font-family: 'Inter', sans-serif;
-    border: 1px solid #30363d;
-    background: #161b22;
-    color: #8b949e;
+    border: 1px solid #d0d7de;
+    background: #ffffff;
+    color: #57606a;
     cursor: pointer;
     transition: all 0.12s;
     white-space: nowrap;
 }
-.chip-row .chip:hover { border-color: #58a6ff; color: #58a6ff; }
+.chip-row .chip:hover { border-color: #0969da; color: #0969da; }
 .chip-row .chip.active {
-    background: #1c2128; border-color: #58a6ff; color: #58a6ff;
+    background: #ddf4ff; border-color: #0969da; color: #0969da;
 }
-.chip-row .chip.open.active         { border-color: #58a6ff; color: #58a6ff; background: #0c1929; }
-.chip-row .chip.progress.active     { border-color: #d29922; color: #d29922; background: #1a1405; }
-.chip-row .chip.done.active         { border-color: #3fb950; color: #3fb950; background: #0d1a10; }
-.chip-row .chip.overdue.active      { border-color: #f85149; color: #f85149; background: #1a0909; }
+.chip-row .chip.open.active         { border-color: #0969da; color: #0969da; background: #ddf4ff; }
+.chip-row .chip.progress.active     { border-color: #9a6700; color: #9a6700; background: #fff8c5; }
+.chip-row .chip.done.active         { border-color: #1a7f37; color: #1a7f37; background: #dafbe1; }
+.chip-row .chip.overdue.active      { border-color: #cf222e; color: #cf222e; background: #ffebe9; }
 .chip-row .chip .count {
     display: inline-block;
     margin-left: 6px;
     padding: 0 6px;
     border-radius: 10px;
     font-size: 10px;
-    background: #21262d;
+    background: #eaeef2;
     color: inherit;
 }
 </style>
@@ -359,30 +381,22 @@ def make_conn():
     raise RuntimeError("Streamlit Secrets [database] needs either host/port/user/password/dbname or url.")
 
 def get_conn():
-    """Fresh connection per Streamlit rerun, in AUTOCOMMIT mode.
-
-    Autocommit prevents a bare SELECT from leaving an idle-in-transaction
-    connection open (which held ACCESS SHARE locks and blocked the schema
-    migration). Multi-statement writes wrap themselves in explicit
-    try/commit/rollback blocks.
-    """
+    """Fresh connection per Streamlit rerun, in AUTOCOMMIT mode."""
     conn = make_conn()
     conn.autocommit = True
     return conn, conn.cursor()
 
-# One connection per run (used by every helper below)
+# One connection per run
 conn, c = get_conn()
 
 # ─────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────
 def qall(cursor, sql, params=()):
-    """Execute and fetchall — psycopg2 execute() returns None unlike SQLite."""
     cursor.execute(sql, params)
     return cursor.fetchall()
 
 def qone(cursor, sql, params=()):
-    """Execute and fetchone."""
     cursor.execute(sql, params)
     return cursor.fetchone()
 
@@ -445,12 +459,11 @@ def all_employees():
 # TASK HELPERS
 # ─────────────────────────────────────────
 TASK_STATUSES      = ["Open", "In Progress", "Done"]
-TASK_STATUS_COLORS = {"Open": "#58a6ff", "In Progress": "#d29922", "Done": "#3fb950"}
+TASK_STATUS_COLORS = {"Open": "#0969da", "In Progress": "#9a6700", "Done": "#1a7f37"}
 CAT_ICONS = {"Explorations": "🔭", "Residential": "🏡", "Commercial": "🏢",
              "Licenses": "📄", "Bonds": "🔗", "Payroll": "💰", "Accounting": "💼"}
 
 def as_date(d):
-    """Accept a date, datetime, ISO string or None and return a date (or None)."""
     if d is None or d == "":
         return None
     if isinstance(d, datetime):
@@ -466,36 +479,37 @@ def due_info(due, status):
     """Return (label, color, is_overdue) for a task's due date."""
     d = as_date(due)
     if d is None:
-        return "", "#6e7681", False
+        return "", "#656d76", False
     label = d.strftime("%b %d")
     if status == "Done":
-        return f"Due {label}", "#6e7681", False
+        return f"Due {label}", "#656d76", False
     today = date.today()
     if d < today:
-        return f"Overdue · {label}", "#f85149", True
+        return f"Overdue · {label}", "#cf222e", True
     if d == today:
-        return "Due today", "#d29922", False
-    return f"Due {label}", "#8b949e", False
+        return "Due today", "#9a6700", False
+    return f"Due {label}", "#57606a", False
 
 def task_row_html(name, status, due, proj_id=None, proj_name=None, proj_cat=None,
                   created_by=None, show_project=True):
     """One task as a single compact line (all user text escaped)."""
-    scol = TASK_STATUS_COLORS.get(status, "#8b949e")
+    scol = TASK_STATUS_COLORS.get(status, "#57606a")
     dlabel, dcol, overdue = due_info(due, status)
-    border     = "#5c2b2b" if overdue else "#21262d"
-    name_style = "text-decoration:line-through;color:#6e7681;" if status == "Done" else "color:#e6edf3;"
-    h  = f'<div style="display:flex;align-items:center;gap:10px;background:#161b22;border:1px solid {border};border-radius:8px;padding:10px 14px;min-height:44px;">'
+    border     = "#ffcecb" if overdue else "#d0d7de"
+    bg         = "#fff8f7" if overdue else "#ffffff"
+    name_style = "text-decoration:line-through;color:#656d76;" if status == "Done" else "color:#1f2328;"
+    h  = f'<div style="display:flex;align-items:center;gap:10px;background:{bg};border:1px solid {border};border-radius:8px;padding:10px 14px;min-height:44px;box-shadow:0 1px 2px rgba(31,35,40,0.04);">'
     h += (f'<span style="font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;'
-          f'padding:2px 8px;border-radius:20px;border:1px solid {scol};color:{scol};white-space:nowrap;">{esc(status)}</span>')
+          f'padding:2px 8px;border-radius:20px;border:1px solid {scol};color:{scol};background:#fff;white-space:nowrap;">{esc(status)}</span>')
     h += f'<span style="font-size:13px;font-weight:600;flex:1;{name_style}">{esc(name)}</span>'
     if show_project and proj_name and proj_id:
         icon = CAT_ICONS.get(proj_cat, "📁")
         h += (f'<a href="?open_proj={int(proj_id)}" target="_self" style="text-decoration:none;font-size:11px;'
-              f'color:#58a6ff;white-space:nowrap;">{icon} {esc(proj_name)}</a>')
+              f'color:#0969da;white-space:nowrap;">{icon} {esc(proj_name)}</a>')
     if dlabel:
         h += f'<span style="font-size:11px;font-weight:600;color:{dcol};white-space:nowrap;">{esc(dlabel)}</span>'
     if created_by:
-        h += f'<span style="font-size:11px;color:#6e7681;white-space:nowrap;">{esc(created_by)}</span>'
+        h += f'<span style="font-size:11px;color:#656d76;white-space:nowrap;">{esc(created_by)}</span>'
     h += '</div>'
     return h
 
@@ -534,14 +548,13 @@ if "open_proj" in _qp:
 USERNAME = "Guest"
 
 # ═══════ PART 2 STARTS HERE ═══════
-
 # ─────────────────────────────────────────
 # SIDEBAR
 # ─────────────────────────────────────────
 with st.sidebar:
     st.markdown("""
     <div style="padding:18px 16px 10px 16px;">
-        <div style="font-size:20px;font-weight:800;color:#e6edf3;
+        <div style="font-size:20px;font-weight:800;color:#1f2328;
                     letter-spacing:-0.3px;font-family:'Inter',sans-serif;">
             📦 Task-Box
         </div>
@@ -569,7 +582,6 @@ with st.sidebar:
     st.divider()
     st.markdown("<div class='nav-section'>Sections</div>", unsafe_allow_html=True)
 
-    # Live overdue count for the sidebar badge
     _overdue_count = qone(c,
         "SELECT COUNT(*) FROM tasks WHERE status <> 'Done' AND due_date < %s",
         (date.today(),)
@@ -609,31 +621,27 @@ page = st.session_state.page
 if page == "Main Feed":
     st.markdown("<div class='page-title'>🗞️ Activity Feed</div>", unsafe_allow_html=True)
 
-    # ── Week Calendar ──
     today      = date.today()
-    week_start = today - timedelta(days=today.weekday())  # Monday
+    week_start = today - timedelta(days=today.weekday())
     week_days  = [week_start + timedelta(days=i) for i in range(7)]
     DAY_NAMES  = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
-    # Fetch all projects with start_date (real date column now)
     all_projects = qall(c,
         "SELECT id, name, start_date, category FROM projects WHERE start_date IS NOT NULL"
     )
     CAL_ICONS = {"Explorations": "🔭", "Residential": "🏡", "Commercial": "🏢",
                  "Licenses": "📄", "Bonds": "🔗", "Payroll": "💰"}
 
-    # Build calendar HTML — 7 columns
     cal_cols = st.columns(7)
     for col_idx, day in enumerate(week_days):
         is_today   = (day == today)
         day_label  = DAY_NAMES[col_idx]
         day_num    = day.strftime("%d")
 
-        header_bg    = "#FA8072" if is_today else "#161b22"
-        header_color = "#fff"    if is_today else "#8b949e"
-        border_color = "#FA8072" if is_today else "#21262d"
+        header_bg    = "#FA8072" if is_today else "#ffffff"
+        header_color = "#ffffff" if is_today else "#57606a"
+        border_color = "#FA8072" if is_today else "#d0d7de"
 
-        # Match on real date objects (was string equality on text column)
         day_projects = [(pid, pname, pcat) for pid, pname, pstart, pcat in all_projects
                         if as_date(pstart) == day]
 
@@ -645,20 +653,20 @@ if page == "Main Feed":
             cat_icon   = CAL_ICONS.get(pcat, "📁")
             proj_items += (
                 f'<a href="?open_proj={pid}" target="_self" style="text-decoration:none;">'
-                f'<div style="background:#0d1117;border:1px solid #30363d;border-radius:5px;'
+                f'<div style="background:#f6f8fa;border:1px solid #d0d7de;border-radius:5px;'
                 f'padding:5px 6px;margin-top:4px;cursor:pointer;">'
-                f'<div style="font-size:10px;font-weight:600;color:#e6edf3;margin-bottom:3px;">'
+                f'<div style="font-size:10px;font-weight:600;color:#1f2328;margin-bottom:3px;">'
                 f'{cat_icon} {esc(short_name)}</div>'
                 f'<div style="display:flex;gap:2px;">{av_html}</div>'
                 f'</div></a>'
             )
 
         if not proj_items:
-            proj_items = '<div style="font-size:10px;color:#6e7681;margin-top:6px;text-align:center;">—</div>'
+            proj_items = '<div style="font-size:10px;color:#656d76;margin-top:6px;text-align:center;">—</div>'
 
         cal_cols[col_idx].markdown(
             f'<div style="background:{header_bg};border:1px solid {border_color};border-radius:8px;'
-            f'padding:8px 6px;min-height:100px;">'
+            f'padding:8px 6px;min-height:100px;box-shadow:0 1px 2px rgba(31,35,40,0.04);">'
             f'<div style="font-size:10px;font-weight:700;color:{header_color};text-transform:uppercase;'
             f'letter-spacing:0.08em;text-align:center;">{day_label}</div>'
             f'<div style="font-size:16px;font-weight:700;color:{header_color};text-align:center;margin-bottom:4px;">{day_num}</div>'
@@ -669,11 +677,10 @@ if page == "Main Feed":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # ── Two columns: Activity Log | Live Field Status ──
     feed_col, status_col = st.columns([3, 1], gap="large")
 
     with feed_col:
-        st.markdown("<div style='font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#6e7681;margin-bottom:10px;'>Recent Activity</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#656d76;margin-bottom:10px;'>Recent Activity</div>", unsafe_allow_html=True)
 
         logs = qall(c,
             "SELECT action, item_type, item_name, done_by, done_at, extra FROM activity_log ORDER BY done_at DESC, id DESC"
@@ -707,19 +714,19 @@ if page == "Main Feed":
 
                 done_at_s   = fmt_ts(done_at)
                 badge_class = "badge-project" if item_type == "Project" else "badge-task"
-                card  = '<div style="background:#161b22;border:1px solid #21262d;border-radius:8px;padding:12px 16px;margin-bottom:6px;">'
+                card  = '<div style="background:#ffffff;border:1px solid #d0d7de;border-radius:8px;padding:12px 16px;margin-bottom:6px;box-shadow:0 1px 2px rgba(31,35,40,0.04);">'
                 card += (
                     f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
                     f'<span style="font-size:16px;">{cat_icon}</span>'
                     f'<span class="badge {badge_class}">{item_type}</span>'
-                    f'<span style="font-size:14px;font-weight:600;color:#e6edf3;flex:1;">{esc(item_name)}</span>'
+                    f'<span style="font-size:14px;font-weight:600;color:#1f2328;flex:1;">{esc(item_name)}</span>'
                     f'</div>'
                 )
                 card += '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
-                card += f'<span style="font-size:11px;color:#6e7681;">{esc(action)} by</span>'
+                card += f'<span style="font-size:11px;color:#656d76;">{esc(action)} by</span>'
                 card += creator_av
-                card += f'<span style="font-size:11px;color:#8b949e;font-weight:600;">{esc(done_by)}</span>'
-                card += f'<span style="font-size:11px;color:#6e7681;">· {done_at_s}</span>'
+                card += f'<span style="font-size:11px;color:#57606a;font-weight:600;">{esc(done_by)}</span>'
+                card += f'<span style="font-size:11px;color:#656d76;">· {done_at_s}</span>'
                 if part_av_html:
                     card += f'<span style="display:inline-flex;gap:3px;margin-left:8px;">{part_av_html}</span>'
                 card += '</div></div>'
@@ -727,11 +734,10 @@ if page == "Main Feed":
             feed_html += '</div>'
             st.markdown(feed_html, unsafe_allow_html=True)
 
-    # ── RIGHT: Live Field Status ──
     with status_col:
         st.markdown(
             '<div style="font-size:11px;font-weight:600;text-transform:uppercase;'
-            'letter-spacing:0.08em;color:#6e7681;margin-bottom:10px;">🟢 Field Status</div>',
+            'letter-spacing:0.08em;color:#656d76;margin-bottom:10px;">🟢 Field Status</div>',
             unsafe_allow_html=True
         )
 
@@ -757,7 +763,7 @@ if page == "Main Feed":
                 else:
                     clocked_out.append(emp_name)
 
-            status_html = '<div style="background:#161b22;border:1px solid #21262d;border-radius:8px;padding:12px;min-height:200px;">'
+            status_html = '<div style="background:#ffffff;border:1px solid #d0d7de;border-radius:8px;padding:12px;min-height:200px;box-shadow:0 1px 2px rgba(31,35,40,0.04);">'
 
             if clocked_in:
                 for emp_name, proj, clock_time in clocked_in:
@@ -775,35 +781,35 @@ if page == "Main Feed":
                         since = str(clock_time)
                     status_html += (
                         '<div style="display:flex;align-items:center;gap:8px;'
-                        'padding:7px 0;border-bottom:1px solid #21262d;">'
+                        'padding:7px 0;border-bottom:1px solid #eaeef2;">'
                         f'{av}'
                         '<div style="flex:1;min-width:0;">'
-                        f'<div style="font-size:12px;font-weight:600;color:#e6edf3;'
+                        f'<div style="font-size:12px;font-weight:600;color:#1f2328;'
                         f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{esc(emp_name)}</div>'
-                        f'<div style="font-size:10px;color:#3fb950;">{cat_icon} {esc(proj_name)}</div>'
-                        f'<div style="font-size:10px;color:#6e7681;">{since} ago</div>'
+                        f'<div style="font-size:10px;color:#1a7f37;">{cat_icon} {esc(proj_name)}</div>'
+                        f'<div style="font-size:10px;color:#656d76;">{since} ago</div>'
                         '</div>'
-                        '<div style="width:8px;height:8px;border-radius:50%;background:#3fb950;'
-                        'box-shadow:0 0 6px #3fb95088;flex-shrink:0;"></div>'
+                        '<div style="width:8px;height:8px;border-radius:50%;background:#1a7f37;'
+                        'box-shadow:0 0 6px #1a7f3755;flex-shrink:0;"></div>'
                         '</div>'
                     )
             else:
                 status_html += (
-                    '<div style="font-size:12px;color:#6e7681;text-align:center;padding:20px 0;">'
+                    '<div style="font-size:12px;color:#656d76;text-align:center;padding:20px 0;">'
                     '👷 No one clocked in yet</div>'
                 )
 
             if clocked_out:
                 status_html += (
                     '<div style="font-size:10px;font-weight:600;text-transform:uppercase;'
-                    'letter-spacing:0.08em;color:#6e7681;margin-top:14px;margin-bottom:6px;">Off</div>'
+                    'letter-spacing:0.08em;color:#656d76;margin-top:14px;margin-bottom:6px;">Off</div>'
                 )
                 for emp_name in clocked_out:
                     av = avatar_html(emp_name, "sm")
                     status_html += (
-                        '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;opacity:0.4;">'
+                        '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;opacity:0.5;">'
                         f'{av}'
-                        f'<span style="font-size:11px;color:#6e7681;">{esc(emp_name)}</span>'
+                        f'<span style="font-size:11px;color:#656d76;">{esc(emp_name)}</span>'
                         '</div>'
                     )
 
@@ -813,8 +819,8 @@ if page == "Main Feed":
         except Exception as e:
             if "clock_events" in str(e):
                 st.markdown(
-                    '<div style="background:#161b22;border:1px solid #21262d;border-radius:8px;'
-                    'padding:20px;text-align:center;color:#6e7681;font-size:12px;">'
+                    '<div style="background:#ffffff;border:1px solid #d0d7de;border-radius:8px;'
+                    'padding:20px;text-align:center;color:#656d76;font-size:12px;">'
                     '📱 ClockBox not connected yet.<br>'
                     '<span style="font-size:10px;">Run setup.sql in Supabase to enable.</span>'
                     '</div>',
@@ -822,8 +828,8 @@ if page == "Main Feed":
                 )
             else:
                 st.markdown(
-                    f'<div style="background:#161b22;border:1px solid #21262d;border-radius:8px;'
-                    f'padding:12px;color:#f85149;font-size:11px;">Field status error: {esc(str(e))}</div>',
+                    f'<div style="background:#ffffff;border:1px solid #ffcecb;border-radius:8px;'
+                    f'padding:12px;color:#cf222e;font-size:11px;">Field status error: {esc(str(e))}</div>',
                     unsafe_allow_html=True
                 )
 
@@ -864,16 +870,15 @@ elif page == "New Task":
 elif page == "Tasks":
     st.markdown("<div class='page-title'>✅ Tasks</div>", unsafe_allow_html=True)
 
-    # ── Summary chips ──
     status_counts = dict(qall(c, "SELECT status, COUNT(*) FROM tasks GROUP BY status"))
     overdue_n     = qone(c, "SELECT COUNT(*) FROM tasks WHERE status <> 'Done' AND due_date < %s", (date.today(),))[0]
     chips = ""
-    for label, n, col in [("Open", status_counts.get("Open", 0), "#58a6ff"),
-                          ("In progress", status_counts.get("In Progress", 0), "#d29922"),
-                          ("Done", status_counts.get("Done", 0), "#3fb950"),
-                          ("Overdue", overdue_n, "#f85149")]:
+    for label, n, col in [("Open", status_counts.get("Open", 0), "#0969da"),
+                          ("In progress", status_counts.get("In Progress", 0), "#9a6700"),
+                          ("Done", status_counts.get("Done", 0), "#1a7f37"),
+                          ("Overdue", overdue_n, "#cf222e")]:
         chips += (f'<span style="display:inline-block;margin-right:8px;padding:3px 12px;border-radius:20px;'
-                  f'border:1px solid {col};color:{col};font-size:11px;font-weight:700;">{n} {label}</span>')
+                  f'border:1px solid {col};color:{col};font-size:11px;font-weight:700;background:#fff;">{n} {label}</span>')
     st.markdown(f"<div class='page-subtitle' style='margin-bottom:16px;'>{chips}</div>", unsafe_allow_html=True)
 
     projects_all = qall(c, "SELECT id, name FROM projects ORDER BY name")
@@ -958,7 +963,6 @@ elif page == "Tasks":
     chip_html += "</div>"
     st.markdown(chip_html, unsafe_allow_html=True)
 
-    # ── Clickable chips via invisible buttons ──
     chip_cols = st.columns(len(chips_def))
     for i, (key, label, _cls) in enumerate(chips_def):
         if chip_cols[i].button(label, key=f"task_chip_{key}", use_container_width=True):
@@ -974,7 +978,6 @@ elif page == "Tasks":
     search_text = f3.text_input("Search", placeholder="Search tasks…", key="task_f_search")
     sort_by     = f4.selectbox("Sort", ["Due date", "Recently added", "Alphabetical"], key="task_f_sort")
 
-    # ── Build WHERE ──
     where, params = [], []
     if status_filter == "Active":
         where.append("t.status <> 'Done'")
@@ -1001,7 +1004,6 @@ elif page == "Tasks":
         pat = search_text.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         where.append("t.task_name ILIKE %s"); params.append("%" + pat + "%")
 
-    # ── ORDER BY from sort selector ──
     order_clauses = {
         "Due date":       "(t.status = 'Done'), t.due_date NULLS LAST, t.id DESC",
         "Recently added": "t.id DESC",
@@ -1021,7 +1023,7 @@ elif page == "Tasks":
         st.markdown("""
         <div class="empty-state" style="padding:50px 20px;">
             <div class="empty-icon">✅</div>
-            No tasks match.<br>Use <strong style="color:#3fb950">＋ New Task</strong> to add one.
+            No tasks match.<br>Use <strong style="color:#1a7f37">＋ New Task</strong> to add one.
         </div>
         """, unsafe_allow_html=True)
     else:
@@ -1066,7 +1068,7 @@ elif page == "New Project":
         proj_customer = st.text_input("Customer / Client (optional)")
         proj_address  = st.text_input("Address (optional)")
 
-        st.markdown("<div style='font-size:13px;font-weight:500;color:#8b949e;margin-top:8px;margin-bottom:6px;'>Participants</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size:13px;font-weight:500;color:#57606a;margin-top:8px;margin-bottom:6px;'>Participants</div>", unsafe_allow_html=True)
         selected_emps = []
         cols_per_row = 4
         emp_rows = [emp_list[i:i+cols_per_row] for i in range(0, len(emp_list), cols_per_row)]
@@ -1087,8 +1089,6 @@ elif page == "New Project":
             if USERNAME not in all_parts:
                 all_parts.append(USERNAME)
 
-            # Explicit transaction: project + participants must land together,
-            # even though the connection is in autocommit mode by default.
             conn.autocommit = False
             try:
                 c.execute(
@@ -1138,7 +1138,6 @@ elif page == "Project Detail" and st.session_state.active_project:
         name, category, est_duration, start_date, created_by, created_at, address, customer = proj
         participants = get_participants(proj_id)
 
-        # Back button
         if st.button("← Back", key="back_btn"):
             st.session_state.page = category
             st.session_state.active_project = None
@@ -1149,14 +1148,12 @@ elif page == "Project Detail" and st.session_state.active_project:
 
         left_col, right_col = st.columns([1, 1], gap="large")
 
-        # ── LEFT: Details + Phases + Tasks + Complete/Delete ──
         with left_col:
             part_html       = "".join(avatar_html(p, "sm") for p in participants)
             part_names_html = "".join(
-                f'<span style="font-size:11px;color:#8b949e;align-self:center;">{esc(p)}</span>'
+                f'<span style="font-size:11px;color:#57606a;align-self:center;">{esc(p)}</span>'
                 for p in participants
             )
-            # Pure string concatenation — never nested f-strings
             box = '<div class="detail-box">'
             box += f'<div class="detail-label">Category</div><div class="detail-value">{esc(category)}</div>'
             if customer:
@@ -1175,7 +1172,6 @@ elif page == "Project Detail" and st.session_state.active_project:
 
             st.markdown("<br>", unsafe_allow_html=True)
 
-            # ── Phases (single query with LATERAL join — was N+1 before) ──
             st.markdown("**Project Phases**")
             phases = qall(c,
                 """SELECT p.id, p.phase_name, p.equipment, p.comments, p.added_by, p.added_at,
@@ -1195,11 +1191,11 @@ elif page == "Project Detail" and st.session_state.active_project:
 
             PROGRESS_STEPS = ["Started", "25%", "50%", "75%", "Finished"]
             PROGRESS_COLORS = {
-                "Started":  "#58a6ff",
-                "25%":      "#d29922",
-                "50%":      "#d29922",
-                "75%":      "#3fb950",
-                "Finished": "#3fb950",
+                "Started":  "#0969da",
+                "25%":      "#9a6700",
+                "50%":      "#9a6700",
+                "75%":      "#1a7f37",
+                "Finished": "#1a7f37",
             }
 
             if phases:
@@ -1222,47 +1218,47 @@ elif page == "Project Detail" and st.session_state.active_project:
                             )
                         else:
                             pills_html += (
-                                f'<span style="background:#21262d;color:#6e7681;font-size:10px;'
+                                f'<span style="background:#f6f8fa;color:#656d76;font-size:10px;'
                                 f'font-weight:600;padding:4px 10px;border-radius:4px;'
-                                f'border:1px solid #30363d;">{step}</span> '
+                                f'border:1px solid #d0d7de;">{step}</span> '
                             )
 
                     if latest_status:
                         prog_color       = PROGRESS_COLORS[latest_status]
                         last_update_html = (
-                            f'<div style="font-size:11px;color:#6e7681;margin-top:6px;">'
+                            f'<div style="font-size:11px;color:#656d76;margin-top:6px;">'
                             f'Last updated to <span style="color:{prog_color};font-weight:600;">'
                             f'{esc(latest_status)}</span> by '
-                            f'<span style="color:#8b949e;font-weight:600;">{esc(latest_by)}</span>'
+                            f'<span style="color:#57606a;font-weight:600;">{esc(latest_by)}</span>'
                             f' &middot; {fmt_ts(latest_at)}</div>'
                         )
                     else:
-                        last_update_html = '<div style="font-size:11px;color:#6e7681;margin-top:6px;">Not started yet.</div>'
+                        last_update_html = '<div style="font-size:11px;color:#656d76;margin-top:6px;">Not started yet.</div>'
 
                     card_html = (
                         '<div class="phase-card">'
                           '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">'
-                            f'<div style="font-size:13px;font-weight:700;color:#e6edf3;">📌 {esc(ph_name)}</div>'
-                            f'<div style="font-size:10px;color:#6e7681;text-align:right;">'
-                              f'Created by <span style="color:#8b949e;font-weight:600;">{esc(ph_by)}</span>'
+                            f'<div style="font-size:13px;font-weight:700;color:#1f2328;">📌 {esc(ph_name)}</div>'
+                            f'<div style="font-size:10px;color:#656d76;text-align:right;">'
+                              f'Created by <span style="color:#57606a;font-weight:600;">{esc(ph_by)}</span>'
                               f'<br>{fmt_ts(ph_at)}'
                             f'</div>'
                           '</div>'
                     )
                     if equip_str:
                         card_html += (
-                            f'<div style="font-size:12px;color:#8b949e;margin-bottom:4px;">'
+                            f'<div style="font-size:12px;color:#57606a;margin-bottom:4px;">'
                             f'🔧 <strong>Equipment:</strong> {esc(equip_str)}</div>'
                         )
                     if comment_str:
                         card_html += (
-                            f'<div style="font-size:12px;color:#8b949e;margin-bottom:4px;">'
+                            f'<div style="font-size:12px;color:#57606a;margin-bottom:4px;">'
                             f'💬 <strong>Comments:</strong> {esc(comment_str)}</div>'
                         )
                     card_html += (
                         '<div style="margin-top:12px;">'
                           '<div style="font-size:10px;font-weight:600;text-transform:uppercase;'
-                               'letter-spacing:0.08em;color:#6e7681;margin-bottom:6px;">Progress</div>'
+                               'letter-spacing:0.08em;color:#656d76;margin-bottom:6px;">Progress</div>'
                           f'<div style="display:flex;gap:5px;flex-wrap:wrap;">{pills_html}</div>'
                           f'{last_update_html}'
                         '</div>'
@@ -1279,13 +1275,12 @@ elif page == "Project Detail" and st.session_state.active_project:
                                     (ph_id, step, USERNAME, get_now())
                                 )
                                 st.rerun()
-                        # Cascade deletes the phase's progress rows automatically.
                         if prog_cols[-1].button("🗑️", key=f"del_phase_{ph_id}", help="Delete this phase"):
                             c.execute("DELETE FROM phases WHERE id=%s", (ph_id,))
                             st.rerun()
                         st.markdown("<div style='margin-bottom:8px;'></div>", unsafe_allow_html=True)
             else:
-                st.markdown("<div style='color:#6e7681;font-size:13px;'>No phases yet.</div>", unsafe_allow_html=True)
+                st.markdown("<div style='color:#656d76;font-size:13px;'>No phases yet.</div>", unsafe_allow_html=True)
 
             if USERNAME in participants:
                 st.markdown("<br>**Add a Phase**", unsafe_allow_html=True)
@@ -1304,7 +1299,6 @@ elif page == "Project Detail" and st.session_state.active_project:
             else:
                 st.caption("Only project participants can add phases.")
 
-            # ── Tasks for this project ──
             st.markdown("<br>**Tasks**", unsafe_allow_html=True)
             ptasks = qall(c,
                 "SELECT id, task_name, status, due_date, created_by FROM tasks WHERE project_id=%s "
@@ -1324,7 +1318,7 @@ elif page == "Project Detail" and st.session_state.active_project:
                             update_task_status(tid, tname, tstatus, new_status)
                             st.rerun()
             else:
-                st.markdown("<div style='color:#6e7681;font-size:13px;'>No tasks yet.</div>", unsafe_allow_html=True)
+                st.markdown("<div style='color:#656d76;font-size:13px;'>No tasks yet.</div>", unsafe_allow_html=True)
 
             if USERNAME in participants:
                 with st.form("form_proj_task", clear_on_submit=True):
@@ -1339,25 +1333,22 @@ elif page == "Project Detail" and st.session_state.active_project:
                     log_activity("Created", "Task", pt_name.strip(), USERNAME)
                     st.rerun()
 
-            # ── Complete / Delete Project ──
             st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("<hr style='border-color:#21262d;'>", unsafe_allow_html=True)
+            st.markdown("<hr style='border-color:#d0d7de;'>", unsafe_allow_html=True)
 
             proj_status  = qone(c, "SELECT completed, completed_by, completed_at FROM projects WHERE id=%s", (proj_id,))
             is_completed = proj_status and proj_status[0] is True
 
             if is_completed:
                 st.markdown(
-                    f'<div style="background:#0d1a10;border:1px solid #1f4a24;border-radius:6px;'
-                    f'padding:10px 14px;font-size:12px;color:#3fb950;margin-bottom:8px;">'
+                    f'<div style="background:#dafbe1;border:1px solid #aee5bd;border-radius:6px;'
+                    f'padding:10px 14px;font-size:12px;color:#1a7f37;margin-bottom:8px;">'
                     f'✅ Completed by <strong>{esc(proj_status[1])}</strong> · {fmt_ts(proj_status[2])}</div>',
                     unsafe_allow_html=True
                 )
             elif USERNAME in participants:
                 if st.button("✅  Mark as Complete", key="complete_project", use_container_width=True):
                     now = get_now()
-                    # Explicit transaction: project update + activity log +
-                    # accounting mirror must land together.
                     conn.autocommit = False
                     try:
                         c.execute(
@@ -1388,9 +1379,6 @@ elif page == "Project Detail" and st.session_state.active_project:
                     st.warning("⚠️ Are you sure? This will permanently delete the project and everything under it.")
                     c1, c2 = st.columns(2)
                     if c1.button("Yes, delete it", key="confirm_del_yes"):
-                        # ON DELETE CASCADE handles phases, phase_progress,
-                        # participants, chat, accounting, clock_events, field_reports.
-                        # tasks are unlinked (ON DELETE SET NULL), not deleted.
                         c.execute("DELETE FROM projects WHERE id=%s", (proj_id,))
                         st.session_state.confirm_delete    = False
                         st.session_state.active_project    = None
@@ -1400,10 +1388,8 @@ elif page == "Project Detail" and st.session_state.active_project:
                         st.session_state.confirm_delete = False
                         st.rerun()
 
-        # ── RIGHT: Timeline + Chat ──
         with right_col:
 
-            # ── Phase Timeline (single query — was N+1 before) ──
             timeline_phases = qall(c,
                 """SELECT p.id, p.phase_name, pp.status
                    FROM phases p
@@ -1422,32 +1408,31 @@ elif page == "Project Detail" and st.session_state.active_project:
                 timeline_html = (
                     '<div style="margin-bottom:20px;">'
                     '<div style="font-size:10px;font-weight:600;text-transform:uppercase;'
-                         'letter-spacing:0.08em;color:#6e7681;margin-bottom:12px;">Phase Timeline</div>'
+                         'letter-spacing:0.08em;color:#656d76;margin-bottom:12px;">Phase Timeline</div>'
                     '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:0;">'
                 )
                 for t_idx, (t_id, t_name, t_status) in enumerate(timeline_phases):
                     if t_status == "Finished":
-                        ball_color  = "#58a6ff"
-                        label_color = "#58a6ff"
-                        ring        = "#58a6ff"
+                        ball_color  = "#0969da"
+                        label_color = "#0969da"
+                        ring        = "#0969da"
                     elif t_status in ("Started", "25%", "50%", "75%"):
-                        ball_color  = "#3fb950"
-                        label_color = "#3fb950"
-                        ring        = "#3fb950"
+                        ball_color  = "#1a7f37"
+                        label_color = "#1a7f37"
+                        ring        = "#1a7f37"
                     else:
-                        ball_color  = "#21262d"
-                        label_color = "#6e7681"
-                        ring        = "#30363d"
+                        ball_color  = "#eaeef2"
+                        label_color = "#656d76"
+                        ring        = "#d0d7de"
 
                     connector = ""
                     if t_idx < len(timeline_phases) - 1:
-                        connector = '<div style="flex:1;height:2px;background:#21262d;min-width:16px;max-width:40px;"></div>'
+                        connector = '<div style="flex:1;height:2px;background:#d0d7de;min-width:16px;max-width:40px;"></div>'
 
                     timeline_html += (
                         '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">'
                           f'<div style="width:14px;height:14px;border-radius:50%;'
-                               f'background:{ball_color};border:2px solid {ring};'
-                               f'box-shadow:0 0 6px {ball_color}33;"></div>'
+                               f'background:{ball_color};border:2px solid {ring};"></div>'
                           f'<div style="font-size:9px;color:{label_color};font-weight:600;'
                                f'text-align:center;max-width:60px;line-height:1.2;">{esc(t_name)}</div>'
                         '</div>'
@@ -1463,7 +1448,7 @@ elif page == "Project Detail" and st.session_state.active_project:
                 (proj_id,)
             )
 
-            chat_html = "<div style='height:360px;overflow-y:auto;padding:8px;background:#0d1117;border:1px solid #21262d;border-radius:8px;margin-bottom:12px;'>"
+            chat_html = "<div style='height:360px;overflow-y:auto;padding:8px;background:#ffffff;border:1px solid #d0d7de;border-radius:8px;margin-bottom:12px;'>"
             if messages:
                 for sender, message, sent_at in messages:
                     bubble_class = "mine" if sender == USERNAME else "theirs"
@@ -1473,13 +1458,13 @@ elif page == "Project Detail" and st.session_state.active_project:
                         f'<div style="display:flex;flex-direction:column;align-items:{align};margin-bottom:8px;">'
                         f'<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">'
                         f'{av}'
-                        f'<span style="font-size:10px;color:#6e7681;">{esc(sender)} · {fmt_ts(sent_at)}</span>'
+                        f'<span style="font-size:10px;color:#656d76;">{esc(sender)} · {fmt_ts(sent_at)}</span>'
                         f'</div>'
                         f'<div class="chat-bubble {bubble_class}">{esc(message)}</div>'
                         f'</div>'
                     )
             else:
-                chat_html += "<div style='text-align:center;color:#6e7681;font-size:13px;padding:40px 0;'>No messages yet. Start the conversation!</div>"
+                chat_html += "<div style='text-align:center;color:#656d76;font-size:13px;padding:40px 0;'>No messages yet. Start the conversation!</div>"
             chat_html += "</div>"
             st.markdown(chat_html, unsafe_allow_html=True)
 
@@ -1511,7 +1496,6 @@ elif page in ["Explorations", "Residential", "Commercial", "Licenses", "Bonds", 
     st.markdown(f"<div class='page-subtitle'>Projects in {page.lower()}.</div>", unsafe_allow_html=True)
 
     if page in ["Explorations", "Residential", "Commercial", "Licenses", "Bonds", "Payroll"]:
-        # Active (not completed) projects — boolean column now
         rows = qall(c,
             "SELECT id, name, created_by FROM projects WHERE category=%s AND completed IS NOT TRUE ORDER BY created_at DESC, id DESC",
             (page,)
@@ -1541,11 +1525,10 @@ elif page in ["Explorations", "Residential", "Commercial", "Licenses", "Bonds", 
             <div class="empty-state" style="padding:40px 20px;">
                 <div class="empty-icon">{icon}</div>
                 No active {page.lower()} projects yet.<br>
-                Use <strong style="color:#3fb950">＋ New Project</strong> to add one.
+                Use <strong style="color:#1a7f37">＋ New Project</strong> to add one.
             </div>
             """, unsafe_allow_html=True)
 
-        # ── Completed Projects ──
         completed_rows = qall(c,
             "SELECT id, name, created_by, completed_by, completed_at FROM projects WHERE category=%s AND completed IS TRUE ORDER BY completed_at DESC",
             (page,)
@@ -1555,7 +1538,7 @@ elif page in ["Explorations", "Residential", "Commercial", "Licenses", "Bonds", 
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown(
                 '<div style="font-size:11px;font-weight:600;text-transform:uppercase;'
-                'letter-spacing:0.08em;color:#6e7681;margin-bottom:10px;">Completed Projects</div>',
+                'letter-spacing:0.08em;color:#656d76;margin-bottom:10px;">Completed Projects</div>',
                 unsafe_allow_html=True
             )
             completed_html = ""
@@ -1565,14 +1548,15 @@ elif page in ["Explorations", "Residential", "Commercial", "Licenses", "Bonds", 
                 completed_html += (
                     f'<a href="?open_proj={cpid}" target="_self" style="text-decoration:none;">'
                     f'<div style="display:flex;align-items:center;gap:10px;'
-                    f'background:#0d1117;border:1px solid #21262d;border-radius:6px;'
-                    f'padding:8px 14px;margin-bottom:5px;cursor:pointer;">'
-                    f'<span style="font-size:11px;background:#0d1a10;color:#3fb950;border:1px solid #1f4a24;'
+                    f'background:#ffffff;border:1px solid #d0d7de;border-radius:6px;'
+                    f'padding:8px 14px;margin-bottom:5px;cursor:pointer;'
+                    f'box-shadow:0 1px 2px rgba(31,35,40,0.04);">'
+                    f'<span style="font-size:11px;background:#dafbe1;color:#1a7f37;border:1px solid #aee5bd;'
                     f'border-radius:20px;padding:2px 8px;font-weight:700;">DONE</span>'
-                    f'<span style="font-size:13px;font-weight:600;color:#8b949e;flex:1;">{esc(cpname)}</span>'
+                    f'<span style="font-size:13px;font-weight:600;color:#57606a;flex:1;">{esc(cpname)}</span>'
                     f'<span style="display:flex;gap:3px;">{av_html}</span>'
-                    f'<span style="font-size:11px;color:#6e7681;">Completed by '
-                    f'<strong style="color:#8b949e">{esc(cby)}</strong> · {fmt_ts(cat2)}</span>'
+                    f'<span style="font-size:11px;color:#656d76;">Completed by '
+                    f'<strong style="color:#57606a">{esc(cby)}</strong> · {fmt_ts(cat2)}</span>'
                     f'</div></a>'
                 )
             st.markdown(completed_html, unsafe_allow_html=True)
@@ -1626,7 +1610,7 @@ elif page == "Accounting":
                 with left_col:
                     part_html       = "".join(avatar_html(p, "sm") for p in participants)
                     part_names_html = "".join(
-                        f'<span style="font-size:11px;color:#8b949e;align-self:center;">{esc(p)}</span>'
+                        f'<span style="font-size:11px;color:#57606a;align-self:center;">{esc(p)}</span>'
                         for p in participants
                     )
                     orig_proj = qone(c,
@@ -1651,21 +1635,22 @@ elif page == "Accounting":
 
                     st.markdown("<br>", unsafe_allow_html=True)
 
-                    # ── Billed status ──
                     st.markdown(
                         '<div style="font-size:10px;font-weight:600;text-transform:uppercase;'
-                        'letter-spacing:0.08em;color:#6e7681;margin-bottom:8px;">Billed</div>',
+                        'letter-spacing:0.08em;color:#656d76;margin-bottom:8px;">Billed</div>',
                         unsafe_allow_html=True
                     )
                     billed_opts   = ["Not Completed", "Completed"]
-                    billed_colors = {"Not Completed": "#d29922", "Completed": "#3fb950"}
+                    billed_colors = {"Not Completed": "#9a6700", "Completed": "#1a7f37"}
                     b_cols = st.columns(len(billed_opts))
                     for i, opt in enumerate(billed_opts):
                         is_sel     = (a_billed == opt)
-                        btn_style  = "border: 1px solid " + (billed_colors[opt] if is_sel else "#30363d")
-                        btn_color  = billed_colors[opt] if is_sel else "#6e7681"
+                        btn_style  = "border: 1px solid " + (billed_colors[opt] if is_sel else "#d0d7de")
+                        btn_color  = billed_colors[opt] if is_sel else "#656d76"
+                        btn_bg     = "#fff8c5" if (is_sel and opt == "Not Completed") else (
+                                     "#dafbe1" if (is_sel and opt == "Completed") else "#ffffff")
                         b_cols[i].markdown(
-                            f'<div style="background:{"#161b22" if is_sel else "#0d1117"};'
+                            f'<div style="background:{btn_bg};'
                             f'{btn_style};border-radius:5px;padding:6px;text-align:center;'
                             f'font-size:11px;font-weight:600;color:{btn_color};">{opt}</div>',
                             unsafe_allow_html=True
@@ -1676,21 +1661,23 @@ elif page == "Accounting":
 
                     st.markdown("<br>", unsafe_allow_html=True)
 
-                    # ── Received status ──
                     st.markdown(
                         '<div style="font-size:10px;font-weight:600;text-transform:uppercase;'
-                        'letter-spacing:0.08em;color:#6e7681;margin-bottom:8px;">Received</div>',
+                        'letter-spacing:0.08em;color:#656d76;margin-bottom:8px;">Received</div>',
                         unsafe_allow_html=True
                     )
                     recv_opts   = ["No", "Partially", "Completed"]
-                    recv_colors = {"No": "#f85149", "Partially": "#d29922", "Completed": "#3fb950"}
+                    recv_colors = {"No": "#cf222e", "Partially": "#9a6700", "Completed": "#1a7f37"}
                     r_cols = st.columns(len(recv_opts))
                     for i, opt in enumerate(recv_opts):
                         is_sel    = (a_received == opt)
-                        btn_style = "border: 1px solid " + (recv_colors[opt] if is_sel else "#30363d")
-                        btn_color = recv_colors[opt] if is_sel else "#6e7681"
+                        btn_style = "border: 1px solid " + (recv_colors[opt] if is_sel else "#d0d7de")
+                        btn_color = recv_colors[opt] if is_sel else "#656d76"
+                        btn_bg    = "#ffebe9" if (is_sel and opt == "No") else (
+                                    "#fff8c5" if (is_sel and opt == "Partially") else (
+                                    "#dafbe1" if (is_sel and opt == "Completed") else "#ffffff"))
                         r_cols[i].markdown(
-                            f'<div style="background:{"#161b22" if is_sel else "#0d1117"};'
+                            f'<div style="background:{btn_bg};'
                             f'{btn_style};border-radius:5px;padding:6px;text-align:center;'
                             f'font-size:11px;font-weight:600;color:{btn_color};">{opt}</div>',
                             unsafe_allow_html=True
@@ -1706,7 +1693,7 @@ elif page == "Accounting":
                         (a_proj_id,)
                     )
 
-                    chat_html = "<div style='height:400px;overflow-y:auto;padding:8px;background:#0d1117;border:1px solid #21262d;border-radius:8px;margin-bottom:12px;'>"
+                    chat_html = "<div style='height:400px;overflow-y:auto;padding:8px;background:#ffffff;border:1px solid #d0d7de;border-radius:8px;margin-bottom:12px;'>"
                     if msgs:
                         for sender, message, sent_at in msgs:
                             bubble_class = "mine" if sender == USERNAME else "theirs"
@@ -1715,12 +1702,12 @@ elif page == "Accounting":
                             chat_html += (
                                 f'<div style="display:flex;flex-direction:column;align-items:{align};margin-bottom:8px;">'
                                 f'<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">'
-                                f'{av}<span style="font-size:10px;color:#6e7681;">{esc(sender)} · {fmt_ts(sent_at)}</span></div>'
+                                f'{av}<span style="font-size:10px;color:#656d76;">{esc(sender)} · {fmt_ts(sent_at)}</span></div>'
                                 f'<div class="chat-bubble {bubble_class}">{esc(message)}</div>'
                                 f'</div>'
                             )
                     else:
-                        chat_html += "<div style='text-align:center;color:#6e7681;font-size:13px;padding:40px 0;'>No messages yet.</div>"
+                        chat_html += "<div style='text-align:center;color:#656d76;font-size:13px;padding:40px 0;'>No messages yet.</div>"
                     chat_html += "</div>"
                     st.markdown(chat_html, unsafe_allow_html=True)
 
@@ -1737,25 +1724,24 @@ elif page == "Accounting":
                         st.rerun()
 
         else:
-            # ── Accounting list ──
-            billed_color  = {"Not Completed": "#d29922", "Completed": "#3fb950"}
-            recv_color    = {"No": "#f85149", "Partially": "#d29922", "Completed": "#3fb950"}
+            billed_color  = {"Not Completed": "#9a6700", "Completed": "#1a7f37"}
+            recv_color    = {"No": "#cf222e", "Partially": "#9a6700", "Completed": "#1a7f37"}
 
             for a_id, a_proj_id, a_name, a_cat, a_creator, a_cby, a_cat2, a_billed, a_received in acc_rows:
-                bc = billed_color.get(a_billed, "#6e7681")
-                rc = recv_color.get(a_received, "#6e7681")
+                bc = billed_color.get(a_billed, "#656d76")
+                rc = recv_color.get(a_received, "#656d76")
                 cat_icon = {"Explorations": "🔭", "Residential": "🏡", "Commercial": "🏢"}.get(a_cat, "📁")
                 st.markdown(
                     f'<div style="display:flex;align-items:center;gap:10px;'
-                    f'background:#161b22;border:1px solid #21262d;border-radius:6px;'
-                    f'padding:10px 14px;margin-bottom:6px;">'
+                    f'background:#ffffff;border:1px solid #d0d7de;border-radius:6px;'
+                    f'padding:10px 14px;margin-bottom:6px;box-shadow:0 1px 2px rgba(31,35,40,0.04);">'
                     f'<span style="font-size:14px;">{cat_icon}</span>'
-                    f'<span style="font-size:13px;font-weight:600;color:#e6edf3;flex:1;">{esc(a_name)}</span>'
+                    f'<span style="font-size:13px;font-weight:600;color:#1f2328;flex:1;">{esc(a_name)}</span>'
                     f'<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;'
-                    f'background:#161b22;border:1px solid {bc};color:{bc};">BILLED: {esc(a_billed)}</span>'
+                    f'background:#ffffff;border:1px solid {bc};color:{bc};">BILLED: {esc(a_billed)}</span>'
                     f'<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;'
-                    f'background:#161b22;border:1px solid {rc};color:{rc};">RECEIVED: {esc(a_received)}</span>'
-                    f'<span style="font-size:11px;color:#6e7681;">{fmt_ts(a_cat2)}</span>'
+                    f'background:#ffffff;border:1px solid {rc};color:{rc};">RECEIVED: {esc(a_received)}</span>'
+                    f'<span style="font-size:11px;color:#656d76;">{fmt_ts(a_cat2)}</span>'
                     f'</div>',
                     unsafe_allow_html=True
                 )
@@ -1770,7 +1756,6 @@ elif page == "Employees":
     st.markdown("<div class='page-title'>👥 Employees</div>", unsafe_allow_html=True)
     st.markdown("<div class='page-subtitle'>Manage your team and view their projects.</div>", unsafe_allow_html=True)
 
-    # ── Add Employee button + form ──
     if st.button("＋  Add Employee", key="add_emp_btn"):
         st.session_state.show_add_emp = True
 
@@ -1811,9 +1796,9 @@ elif page == "Employees":
             st.markdown("<div class='detail-label' style='padding-bottom:8px;'>Team Members</div>", unsafe_allow_html=True)
             for emp in employees:
                 is_selected = st.session_state.selected_employee == emp
-                bg     = "#2d1b2e" if is_selected else "#161b22"
-                color  = "#ff9eb5" if is_selected else "#e6edf3"
-                border = "#ff9eb5" if is_selected else "#21262d"
+                bg     = "#fff0f3" if is_selected else "#ffffff"
+                color  = "#d1493b" if is_selected else "#1f2328"
+                border = "#d1493b" if is_selected else "#d0d7de"
                 weight = "700"     if is_selected else "400"
 
                 row_left, row_right = st.columns([5, 1])
@@ -1836,8 +1821,8 @@ elif page == "Employees":
                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
                     {avatar_html(emp, "lg")}
                     <div>
-                        <div style="font-size:18px;font-weight:700;color:#e6edf3;">{esc(emp)}</div>
-                        <div style="font-size:12px;color:#6e7681;">Employee</div>
+                        <div style="font-size:18px;font-weight:700;color:#1f2328;">{esc(emp)}</div>
+                        <div style="font-size:12px;color:#656d76;">Employee</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -1859,14 +1844,14 @@ elif page == "Employees":
                         st.markdown(f"""
                         <a href="?open_proj={pid}" target="_self" style="text-decoration:none;">
                             <div class="a-card" style="margin-bottom:8px;cursor:pointer;transition:border-color 0.15s;"
-                                 onmouseover="this.style.borderColor='#58a6ff'"
-                                 onmouseout="this.style.borderColor='#21262d'">
+                                 onmouseover="this.style.borderColor='#0969da'"
+                                 onmouseout="this.style.borderColor='#d0d7de'">
                                 <div class="a-card-top">
                                     <span class="badge badge-project">{esc(pcat)}</span>
                                     <span class="a-card-name">{esc(pname)}</span>
                                 </div>
                                 <div class="a-card-meta" style="margin-bottom:6px;">
-                                    Created by <strong style="color:#8b949e">{esc(pcreator)}</strong> · {fmt_ts(pdate)}
+                                    Created by <strong style="color:#57606a">{esc(pcreator)}</strong> · {fmt_ts(pdate)}
                                 </div>
                                 <div style="display:flex;gap:4px;">{part_avatars}</div>
                             </div>
@@ -1875,7 +1860,7 @@ elif page == "Employees":
 
                 else:
                     st.markdown("""
-                    <div style="color:#6e7681;font-size:13px;padding:20px 0;">
+                    <div style="color:#656d76;font-size:13px;padding:20px 0;">
                         Not assigned to any projects yet.
                     </div>
                     """, unsafe_allow_html=True)
