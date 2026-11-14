@@ -530,7 +530,7 @@ if 'confirm_delete'    not in st.session_state: st.session_state.confirm_delete 
 if 'active_accounting' not in st.session_state: st.session_state.active_accounting = None
 if 'edit_task'         not in st.session_state: st.session_state.edit_task = None
 if 'confirm_del_task'  not in st.session_state: st.session_state.confirm_del_task = None
-if 'task_f_status_chip' not in st.session_state: st.session_state.task_f_status_chip = "Active"
+if 'edit_project'      not in st.session_state: st.session_state.edit_project = False
 
 # ── Handle click navigation via query params ──
 _qp = st.query_params
@@ -1127,6 +1127,10 @@ elif page == "New Project":
 # ══════════════════════════════════════════
 elif page == "Project Detail" and st.session_state.active_project:
     proj_id = st.session_state.active_project
+    # If we've arrived at a *different* project than last time, close any open edit form.
+    if st.session_state.get("_edit_proj_id") != proj_id:
+        st.session_state.edit_project = False
+        st.session_state._edit_proj_id = proj_id
     proj = qone(c,
         "SELECT name, category, est_duration, start_date, created_by, created_at, address, customer FROM projects WHERE id=%s",
         (proj_id,)
@@ -1141,6 +1145,7 @@ elif page == "Project Detail" and st.session_state.active_project:
         if st.button("← Back", key="back_btn"):
             st.session_state.page = category
             st.session_state.active_project = None
+            st.session_state.edit_project = False
             st.rerun()
 
         st.markdown(f"<div class='page-title'>📁 {esc(name)}</div>", unsafe_allow_html=True)
@@ -1333,6 +1338,59 @@ elif page == "Project Detail" and st.session_state.active_project:
                     log_activity("Created", "Task", pt_name.strip(), USERNAME)
                     st.rerun()
 
+            # ── Edit Project Details ──
+            st.markdown("<br>", unsafe_allow_html=True)
+            if USERNAME in participants:
+                if not st.session_state.get("edit_project"):
+                    if st.button("✏️  Edit Project Details", key="edit_proj_btn", use_container_width=True):
+                        st.session_state.edit_project = True
+                        st.rerun()
+                else:
+                    with st.form("form_edit_project"):
+                        st.markdown("**Edit Project Details**")
+                        ep_name    = st.text_input("Project Name", value=name)
+                        ep_cat     = st.selectbox(
+                            "Category",
+                            ["Commercial", "Residential", "Explorations",
+                             "Licenses", "Bonds", "Accounting", "Payroll"],
+                            index=["Commercial", "Residential", "Explorations",
+                                   "Licenses", "Bonds", "Accounting", "Payroll"].index(category)
+                                  if category in ["Commercial", "Residential", "Explorations",
+                                                  "Licenses", "Bonds", "Accounting", "Payroll"] else 0
+                        )
+                        ep_duration = st.text_input("Estimated Duration", value=est_duration or "")
+                        ep_start    = st.date_input("Starting Date", value=as_date(start_date))
+                        ep_customer = st.text_input("Customer / Client (optional)", value=customer or "")
+                        ep_address  = st.text_input("Address (optional)", value=address or "")
+                        eb1, eb2 = st.columns(2)
+                        save_ep   = eb1.form_submit_button("Save changes")
+                        cancel_ep = eb2.form_submit_button("Cancel")
+                    if cancel_ep:
+                        st.session_state.edit_project = False
+                        st.rerun()
+                    if save_ep:
+                        if ep_name.strip():
+                            new_addr = ep_address.strip() if ep_cat in ("Commercial","Residential","Explorations") else ""
+                            new_cust = ep_customer.strip() if ep_cat in ("Commercial","Residential","Explorations") else ""
+                            c.execute(
+                                """UPDATE projects
+                                   SET name=%s, category=%s, est_duration=%s, start_date=%s, address=%s, customer=%s
+                                   WHERE id=%s""",
+                                (ep_name.strip(), ep_cat, ep_duration.strip(),
+                                 ep_start, new_addr, new_cust, proj_id)
+                            )
+                            st.session_state.edit_project = False
+                            if ep_cat != category:
+                                st.session_state.page = ep_cat
+                                st.session_state.active_project = None
+                            st.rerun()
+                        else:
+                            st.warning("Please enter a project name.")
+
+            # ── Complete / Delete Project ──
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<hr style='border-color:#d0d7de;'>", unsafe_allow_html=True)
+
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("<hr style='border-color:#d0d7de;'>", unsafe_allow_html=True)
 
@@ -1382,6 +1440,7 @@ elif page == "Project Detail" and st.session_state.active_project:
                         c.execute("DELETE FROM projects WHERE id=%s", (proj_id,))
                         st.session_state.confirm_delete    = False
                         st.session_state.active_project    = None
+                        st.session_state.edit_project      = False
                         st.session_state.page              = category
                         st.rerun()
                     if c2.button("Cancel", key="confirm_del_no"):
